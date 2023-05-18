@@ -3,6 +3,8 @@
 #include "GL/glew.h"
 #include "corecontext.h"
 #include "glewcontext.h"
+#include "entity.h"
+#include "component/terrain.h"
 
 namespace Core {
 
@@ -27,6 +29,11 @@ namespace Core {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // render skybox (render as last to prevent overdraw)
+
+
+		Terrain* terrain = scene->entity->getComponent<Terrain>();
+		terrain->onDraw(scene->cameraInfo.VP, scene->cameraInfo.camPos);
+
 
         glUseProgram(backgroundShaderProgramId);
         glUniformMatrix4fv(glGetUniformLocation(backgroundShaderProgramId, "projection"), 1, GL_FALSE, &scene->cameraInfo.projection[0][0]);

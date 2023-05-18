@@ -15,9 +15,28 @@ namespace Core {
 		// ...
 	}
 
-	Texture* FileSystem::loadTexture(std::filesystem::path entry) {
+	Texture* FileSystem::loadTexture(std::filesystem::path entry) { // anisolevel vs, more parameters...
 
-		return 0;
+		Texture* texture = new Texture(entry.string());
+		textures.insert({ entry.string(), texture });
+
+		return texture;
+	}
+
+	Mesh* FileSystem::loadMesh(std::filesystem::path entry) { // three lod params
+
+		Mesh* mesh = new Mesh(entry.string());
+		meshes.insert({ entry.string(), mesh });
+
+		return mesh;
+	}
+
+	Shader* FileSystem::loadShader(std::filesystem::path entry) {
+
+		Shader* shader = new Shader(entry.string());
+		shaders.insert({ entry.string(), shader });
+
+		return shader;
 	}
 
 	Cubemap* FileSystem::loadCubemap(std::filesystem::path entry) {

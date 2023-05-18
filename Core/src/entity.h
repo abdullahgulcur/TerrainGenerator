@@ -41,7 +41,7 @@ namespace Core {
 				return nullptr;
 			}
 
-			T* newcomp = new T(this);
+			T* newcomp = new T;
 			Component* compToAdd = dynamic_cast<Component*>(newcomp);
 			//compToAdd->transform = transform;
 			components.push_back(compToAdd);
