@@ -1,7 +1,7 @@
 #pragma once
 
-#include "transform.h"
-#include "component.h"
+#include "component/transform.h"
+#include "component/component.h"
 //#include "meshrenderer.h"
 //#include "camera.h"
 
@@ -11,6 +11,12 @@ namespace Core {
 
 	private:
 
+		//void updateItselfAndChildrenTransforms();
+		void cloneRecursively(Entity* copied, Entity* base);
+		void releaseFromParent();
+		//void destroyEntity();
+		//void destroyRecursively();
+
 	public:
 
 		unsigned int id;
@@ -19,10 +25,16 @@ namespace Core {
 		Transform* transform;
 		std::vector<Component*> components;
 
-		Entity(std::string name);
+		Entity(std::string name);//, unsigned int id
+		Entity(std::string name, Entity* parent);//, unsigned int id
+		Entity(Entity* entity, Entity* parent);//, unsigned int id
 		~Entity();
+		bool hasAnyChild();
+		bool hasChild(Entity* entity);
 		void rename(std::string name);
-		//void destroy();
+		bool attachEntity(Entity* entity);
+		//Entity* duplicate();
+		void destroy();
 
 		template <class T>
 		T* addComponent() {
@@ -41,7 +53,7 @@ namespace Core {
 				return nullptr;
 			}
 
-			T* newcomp = new T;
+			T* newcomp = new T;//this
 			Component* compToAdd = dynamic_cast<Component*>(newcomp);
 			//compToAdd->transform = transform;
 			components.push_back(compToAdd);

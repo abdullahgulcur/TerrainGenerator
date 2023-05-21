@@ -11,7 +11,10 @@ namespace Core {
 	void Renderer::init() {
 
 		GlewContext* glew = CoreContext::instance->glewContext;
-		backgroundShaderProgramId = glew->loadShaders("C:/Projects/Fury/Core/src/shader/pbr/background.vert", "C:/Projects/Fury/Core/src/shader/pbr/background.frag");
+		backgroundShaderProgramId = glew->loadShaders("resources/shaders/background.vert", "resources/shaders/background.frag");
+		defaultPbrShaderProgramId = glew->loadShaders("resources/shaders/pbr.vert", "resources/shaders/pbr.frag");
+		alphaBlendedPbrShaderProgramId = glew->loadShaders("resources/shaders/pbr_alpha_clipped.vert", "resources/shaders/pbr_alpha_clipped.frag");
+
 		Renderer::createEnvironmentCubeVAO();
 	}
 
@@ -28,13 +31,34 @@ namespace Core {
         glClearColor(0.3f, 0.3f, 0.3f, 0.f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+		std::stack<Entity*> entStack;
+		entStack.push(scene->root);
+
+		while (!entStack.empty()) {
+
+			Entity* popped = entStack.top();
+			entStack.pop();
+
+			for (Transform*& child : popped->transform->children)
+				entStack.push(child->entity);
+
+			Terrain* terrain = popped->getComponent<Terrain>();
+			if (terrain != NULL) {
+
+				//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+				//terrain->update(cameraInfo.camPos, dt);
+				terrain->onDraw(scene->cameraInfo.VP, scene->cameraInfo.camPos);
+			}
+
+			//if (ParticleSystem* particleSystem = popped->getComponent<ParticleSystem>())
+			//	particleSystem->onDraw(cameraInfo.VP, cameraInfo.camPos);
+
+			if (MeshRenderer* renderer = popped->getComponent<MeshRenderer>())
+				renderer->update(dt);
+
+		}
+
         // render skybox (render as last to prevent overdraw)
-
-
-		Terrain* terrain = scene->entity->getComponent<Terrain>();
-		terrain->onDraw(scene->cameraInfo.VP, scene->cameraInfo.camPos);
-
-
         glUseProgram(backgroundShaderProgramId);
         glUniformMatrix4fv(glGetUniformLocation(backgroundShaderProgramId, "projection"), 1, GL_FALSE, &scene->cameraInfo.projection[0][0]);
         glUniformMatrix4fv(glGetUniformLocation(backgroundShaderProgramId, "view"), 1, GL_FALSE, &scene->cameraInfo.view[0][0]);

@@ -3,9 +3,10 @@
 
 namespace Core {
 
-	Material::Material() {
+	Material::Material(ShaderType type, std::vector<Texture*> textures) {
 
-
+		this->shaderType = type;
+		this->textures = textures;
 	}
 
 	Material::~Material() {

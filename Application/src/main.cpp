@@ -1,9 +1,7 @@
 #include "pch.h"
 #include "corecontext.h"
 #include "editorcontext.h"
-#include "appcontext.h"
 
-using namespace Application;
 using namespace Core;
 using namespace Editor;
 
@@ -17,9 +15,6 @@ int main() {
 	CoreContext::instance = CoreContext::getInstance();
 	CoreContext::instance->init();
 
-	AppContext* app = new AppContext;
-	app->start();
-
 	EditorContext::instance = EditorContext::getInstance();
 	EditorContext::instance->init();
 
@@ -29,14 +24,12 @@ int main() {
 		float dt = currentTime - time;
 		time = currentTime;
 
-		app->update(dt);
 		CoreContext::instance->update(dt);
 		EditorContext::instance->update(dt);
 
 	} while (CoreContext::instance->glfwContext->getOpen());
 
 	delete EditorContext::instance;
-	delete app;
 	delete CoreContext::instance;
 
 	return 0;

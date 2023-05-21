@@ -4,6 +4,7 @@
 #include "cubemap.h"
 #include "mesh.h"
 #include "shader.h"
+#include "material.h"
 
 namespace Core {
 
@@ -19,6 +20,7 @@ namespace Core {
 		std::map<std::string, Cubemap*> cubemaps;
 		std::map<std::string, Shader*> shaders;
 		std::map<std::string, Mesh*> meshes;
+		std::map<std::string, Material*> materials;
 
 		FileSystem();
 		void init();
@@ -26,6 +28,6 @@ namespace Core {
 		Mesh* loadMesh(std::filesystem::path entry);
 		Shader* loadShader(std::filesystem::path entry);
 		Cubemap* loadCubemap(std::filesystem::path entry);
-
+		Material* loadMaterial(std::string name, ShaderType type, std::vector<Texture*> textures);
 	};
 }

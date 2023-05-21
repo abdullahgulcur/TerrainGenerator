@@ -4,6 +4,7 @@
 
 namespace Core {
 
+	// root
 	Transform::Transform(Entity* entity) {
 
 		this->entity = entity;
@@ -12,38 +13,62 @@ namespace Core {
 		localPosition = glm::vec3(0, 0, 0);
 		localRotation = glm::vec3(0, 0, 0);
 		localScale = glm::vec3(1, 1, 1);
-		
+		//globalPosition = localPosition;
+		//globalRotation = localRotation;
+		//globalScale = localScale;
 		model = glm::mat4(1);
 	}
 
+	// new transform
+	Transform::Transform(Entity* entity, Transform* parent) {
+
+		this->entity = entity;
+		this->parent = parent;
+		(parent->children).push_back(this);
+
+		localPosition = glm::vec3(0, 0, 0);
+		localRotation = glm::vec3(0, 0, 0);
+		localScale = glm::vec3(1, 1, 1);
+		//globalPosition = parent->globalPosition;
+		//globalRotation = parent->globalRotation;
+		//globalScale = parent->globalScale;
+		model = parent->model;
+	}
+
+	// copied transform
+	Transform::Transform(Entity* entity, Transform* transform, Transform* parent) {
+
+		this->entity = entity;
+		this->parent = parent;
+		(parent->children).push_back(this);
+
+		localPosition = transform->localPosition;
+		localRotation = transform->localRotation;
+		localScale = transform->localScale;
+		//globalPosition = transform->globalPosition;
+		//globalRotation = transform->globalRotation;
+		//globalScale = transform->globalScale;
+		model = transform->model;
+	}
+
 	Transform::~Transform() {
+	}
+
+	void Transform::start() {
 
 	}
 
-	void Transform::setLocalPosition(glm::vec3 position) {
+	void Transform::update(float dt) {
 
-		this->localPosition = position;
-		Transform::updateTransform();
 	}
 
-	void Transform::setLocalRotation(glm::vec3 rotation) {
-
-		this->localRotation = rotation;
-		Transform::updateTransform();
-	}
-
-	void Transform::setLocalScale(glm::vec3 scale) {
-
-		this->localScale = scale;
-		Transform::updateTransform();
-	}
-
+	// done with transform component panel
 	void Transform::updateTransform() {
 
 		model = parent->model * getLocalModelMatrix();
 
-		///if (GameCamera* cam = entity->getComponent<GameCamera>())
-		///	cam->updateViewMatrix(this);
+	//	if (GameCamera* cam = entity->getComponent<GameCamera>())
+	//		cam->updateViewMatrix(this);
 
 		for (auto& transform : children)
 			transform->updateTransform();
@@ -66,8 +91,8 @@ namespace Core {
 		//globalRotation = parent->globalRotation * localRotation;
 		//globalScale = parent->globalScale * localScale;
 
-		///if (GameCamera* cam = entity->getComponent<GameCamera>())
-		///	cam->updateViewMatrix(this);
+	//	if (GameCamera* cam = entity->getComponent<GameCamera>())
+	//		cam->updateViewMatrix(this);
 
 		for (auto& transform : children)
 			transform->updateModel();
@@ -103,8 +128,8 @@ namespace Core {
 		//globalScale = parent->globalScale * localScale;
 		model = parent->model * getLocalModelMatrix();
 
-		///if (GameCamera* cam = entity->getComponent<GameCamera>())
-		///	cam->updateViewMatrix(this);
+		//if (GameCamera* cam = entity->getComponent<GameCamera>())
+		//	cam->updateViewMatrix(this);
 
 		for (auto& transform : children)
 			transform->updateModel();
@@ -196,6 +221,5 @@ namespace Core {
 		Transform::decompose(transform, scale, rotation, position);
 		return position;
 	}
-
 
 }

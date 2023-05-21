@@ -1,8 +1,12 @@
 #pragma once
 
 #include "component.h"
+#include "material.h"
+#include "mesh.h"
 
 namespace Core {
+
+	class Entity;
 
 	class __declspec(dllexport) MeshRenderer : public Component {
 
@@ -10,15 +14,16 @@ namespace Core {
 
 	public:
 
-		unsigned int shaderProgramId;
-		unsigned int VAO_lod0;
-		unsigned int VAO_lod1;
-		unsigned int VAO_lod2;
+		Mesh* mesh = NULL;
+		Material* material = NULL;
+		Entity* entity = NULL;
 
 		MeshRenderer();
 		~MeshRenderer();
 		void start();
 		void update(float dt);
+		void setMesh(Mesh* mesh);
+		void setMaterial(Material* material);
 		
 	};
 }

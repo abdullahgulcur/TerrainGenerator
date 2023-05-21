@@ -21,6 +21,7 @@ namespace Core {
 		glDeleteTextures(1, &textureId);
 	}
 
+	// ref: http://www.opengl-tutorial.org/beginners-tutorials/tutorial-5-a-textured-cube/
 	void Texture::loadDDS(const char* path) {
 
 		unsigned char header[124];
@@ -128,6 +129,27 @@ namespace Core {
 
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, &image[0]);
 		glGenerateMipmap(GL_TEXTURE_2D);
+	}
+
+	unsigned int Texture::loadPNG_RGBA8(const char* path) {
+
+		unsigned width, height;
+		std::vector<unsigned char> image;
+		lodepng::decode(image, width, height, path, LodePNGColorType::LCT_RGBA, 8);
+
+		unsigned int textureId;
+		glGenTextures(1, &textureId);
+		glBindTexture(GL_TEXTURE_2D, textureId);
+
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, &image[0]);
+		glGenerateMipmap(GL_TEXTURE_2D);
+
+		return textureId;
 	}
 
 }

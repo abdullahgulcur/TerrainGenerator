@@ -21,13 +21,19 @@ namespace Core {
 		glm::vec3 localRotation;
 		glm::vec3 localScale;
 
+		//glm::vec3 globalPosition;
+		//glm::vec3 globalRotation;
+		//glm::vec3 globalScale;
+
 		glm::mat4 model;
 
 		Transform(Entity* entity);
+		Transform(Entity* entity, Transform* transform, bool cpy);
+		Transform(Entity* entity, Transform* parent);
+		Transform(Entity* entity, Transform* transform, Transform* parent);
 		~Transform();
-		void setLocalPosition(glm::vec3 position);
-		void setLocalRotation(glm::vec3 rotation);
-		void setLocalScale(glm::vec3 scale);
+		void start();
+		void update(float dt);
 		void updateTransform();
 		void updateTransformUsingGuizmo();
 		glm::mat4 getLocalModelMatrix();

@@ -16,6 +16,7 @@ namespace Core {
 		Cubemap::createCubemapTextures(path);
 	}
 
+	// ref: https://learnopengl.com/PBR/IBL/Specular-IBL
 	void Cubemap::createCubemapTextures(std::string path) {
 
 		GlewContext* glew = CoreContext::instance->glewContext;

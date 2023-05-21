@@ -31,13 +31,14 @@ namespace Core {
 	void CoreContext::init() {
 
 		renderer->init();
+		fileSystem->init();
 
-		//scene->start();
+		scene->start();
 	}
 
 	void CoreContext::update(float dt) {
 
-		//scene->update(dt);
+		scene->update(dt);
 		renderer->update(dt);
 	}
 

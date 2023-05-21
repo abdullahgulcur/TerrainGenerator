@@ -22,5 +22,7 @@ namespace Core {
 		Texture(std::filesystem::path entry);
 		~Texture();
 		
+		static unsigned int loadPNG_RGBA8(const char* path);
+
 	};
 }

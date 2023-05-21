@@ -136,7 +136,7 @@ namespace Core {
 		for (int i = 0; i < 4; i++)
 			blockAABBs[12 * lodLevel + i] = Terrain::getBoundingBoxOfClipmap1(i, lodLevel);
 
-		//Terrain::createAlbedoMapTextureArray();
+		Terrain::loadTextures();
 	}
 
 	void Terrain::loadTerrainHeightmapOnInit(glm::vec3 camPos, int clipmapLevel) {
@@ -240,7 +240,6 @@ namespace Core {
 		glUniform1f(glGetUniformLocation(programID, "texSize"), (float)TILE_SIZE * MEM_TILE_ONE_SIDE);
 
 		// Terrain Material Parameters
-		glUniform1f(glGetUniformLocation(programID, "heightScale"), -displacementMapScale);
 		glUniform3f(glGetUniformLocation(programID, "lightDirection"), lightDir.x, lightDir.y, lightDir.z);
 					
 		glUniform1f(glGetUniformLocation(programID, "ambientAmount"), ambientAmount);
@@ -315,7 +314,6 @@ namespace Core {
 		glUniform1f(glGetUniformLocation(programID, "maxFog"), maxFog);
 		glUniform3fv(glGetUniformLocation(programID, "fogColor"), 1, &fogColor[0]);
 
-		// bind pre-computed IBL data
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_CUBE_MAP, cubemap->irradianceMap);
 		glActiveTexture(GL_TEXTURE1);
@@ -1109,84 +1107,28 @@ namespace Core {
 		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_REPEAT);
 	}
 
-	void Terrain::loadTextures(std::vector<Texture*>& albedoTerrainTextureList, std::vector<Texture*>& normalTerrainTextureList, Texture* noise0, Texture* noise1) {
+	void Terrain::loadTextures() {
 
-		albedo0 = albedoTerrainTextureList[0]->textureId;
-		albedo1 = albedoTerrainTextureList[1]->textureId;
-		albedo2 = albedoTerrainTextureList[2]->textureId;
-		albedo3 = albedoTerrainTextureList[3]->textureId;
-		albedo4 = albedoTerrainTextureList[4]->textureId;
-		albedo5 = albedoTerrainTextureList[5]->textureId;
-		albedo6 = albedoTerrainTextureList[6]->textureId;
+		std::map<std::string, Texture*>& textures = CoreContext::instance->fileSystem->textures;
 
-		normal0 = normalTerrainTextureList[0]->textureId;
-		normal1 = normalTerrainTextureList[1]->textureId;
-		normal2 = normalTerrainTextureList[2]->textureId;
-		normal3 = normalTerrainTextureList[3]->textureId;
-		normal4 = normalTerrainTextureList[4]->textureId;
-		normal5 = normalTerrainTextureList[5]->textureId;
-		normal6 = normalTerrainTextureList[6]->textureId;
+		albedo0 = textures.at("soil_a")->textureId;
+		albedo1 = textures.at("mulch_a")->textureId;
+		albedo2 = textures.at("granite_a")->textureId;
+		albedo3 = textures.at("soil_rock_a")->textureId;
+		albedo4 = textures.at("snow_a")->textureId;
+		albedo5 = textures.at("sand_a")->textureId;
+		albedo6 = textures.at("lichened_rock_a")->textureId;
 
-		macroTexture = noise0->textureId;
-		noiseTexture = noise1->textureId;
-	}
+		normal0 = textures.at("soil_n")->textureId;
+		normal1 = textures.at("mulch_n")->textureId;
+		normal2 = textures.at("granite_n")->textureId;
+		normal3 = textures.at("soil_rock_n")->textureId;
+		normal4 = textures.at("snow_n")->textureId;
+		normal5 = textures.at("sand_n")->textureId;
+		normal6 = textures.at("lichened_rock_n")->textureId;
 
-	void Terrain::createAlbedoMapTextureArray() {
-
-		
-
-		float maxAniso = 0.0f;
-		glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &maxAniso);
-		float anisotropicFilteringValue = maxAniso;
-
-		//-------------------- MACRO
-		unsigned int width, height;
-		std::vector<unsigned char> out;
-		lodepng::decode(out, width, height, "resources/textures/terrain/noise/gold_a.png", LodePNGColorType::LCT_RGBA, 8);
-
-		glGenTextures(1, &macroTexture);
-		glBindTexture(GL_TEXTURE_2D, macroTexture);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		//glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, anisotropicFilteringValue);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, &out[0]);
-		glGenerateMipmap(GL_TEXTURE_2D);
-		glBindTexture(GL_TEXTURE_2D, 0);
-		//--------------------
-
-		//-------------------- NOISE
-		out.clear();
-		lodepng::decode(out, width, height, "resources/textures/terrain/noise/noiseTexture.png", LodePNGColorType::LCT_RGBA, 8);
-
-		glGenTextures(1, &noiseTexture);
-		glBindTexture(GL_TEXTURE_2D, noiseTexture);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		//glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, anisotropicFilteringValue);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, &out[0]);
-		glGenerateMipmap(GL_TEXTURE_2D);
-		glBindTexture(GL_TEXTURE_2D, 0);
-		//--------------------
-
-		//albedo0 = Terrain::loadDDS(&albedoTexturePaths[0][0]);
-		//albedo1 = Terrain::loadDDS(&albedoTexturePaths[1][0]);
-		//albedo2 = Terrain::loadDDS(&albedoTexturePaths[2][0]);
-		//albedo3 = Terrain::loadDDS(&albedoTexturePaths[3][0]);
-		//albedo4 = Terrain::loadDDS(&albedoTexturePaths[4][0]);
-		//albedo5 = Terrain::loadDDS(&albedoTexturePaths[5][0]);
-		//albedo6 = Terrain::loadDDS(&albedoTexturePaths[6][0]);
-
-		//normal0 = Terrain::loadDDS(&normalTexturePaths[0][0]);
-		//normal1 = Terrain::loadDDS(&normalTexturePaths[1][0]);
-		//normal2 = Terrain::loadDDS(&normalTexturePaths[2][0]);
-		//normal3 = Terrain::loadDDS(&normalTexturePaths[3][0]);
-		//normal4 = Terrain::loadDDS(&normalTexturePaths[4][0]);
-		//normal5 = Terrain::loadDDS(&normalTexturePaths[5][0]);
-		//normal6 = Terrain::loadDDS(&normalTexturePaths[6][0]);
+		macroTexture = textures.at("gold_a")->textureId;
+		noiseTexture = textures.at("noiseTexture")->textureId;
 	}
 
 	void Terrain::writeHeightDataToGPUBuffer(glm::ivec2 index, int texWidth, unsigned char* heightMap, unsigned char* chunk, int level, glm::ivec2 toroidalUpdateBorder) {
@@ -1227,12 +1169,7 @@ namespace Core {
 		}
 	}
 
-	// okurken yaz ;)
 	unsigned char* Terrain::loadTerrainChunkFromDisc(int level, glm::ivec2 index) {
-
-		if (index.x == 6 && index.y == 6 && level == 3) {
-			int x = 5;
-		}
 
 		std::string path = "resources/textures/terrain/heightmaps/map_" + std::to_string(level) + '_' + std::to_string(index.y) + '_' + std::to_string(index.x) + "_.png";
 		std::vector<unsigned char> out;
@@ -1546,16 +1483,6 @@ namespace Core {
 		unsigned char** mipmaps = new unsigned char* [totalLevel];
 		mipmaps[0] = new unsigned char[size * size * 2];
 
-		//float minSlope = 1.f;
-		//float maxSlope = 0.f;
-
-		// [31, 16] height
-		// [15, 12] base color
-		// [11, 8] overlay color
-		// [7, 5] scale
-		// [4, 0] reserved
-
-		// height pass, find max and min slope
 		for (int i = 0; i < size; i++) {
 
 			for (int j = 0; j < size; j++) {
@@ -1564,47 +1491,13 @@ namespace Core {
 				int indexInTerrainMipmap = (i * size + j) * 2;
 				mipmaps[0][indexInTerrainMipmap] = heights[indexInImportedHeightmap];
 				mipmaps[0][indexInTerrainMipmap + 1] = heights[indexInImportedHeightmap + 1];
-				//mipmaps[0][indexInTerrainMipmap + 2] = 0;
-				//mipmaps[0][indexInTerrainMipmap + 3] = 0;
-
-				//glm::vec3 normal = Terrain::getNormal(j, i, 0, 2, size, heights);
-
-				//if (normal.y < minSlope)
-				//	minSlope = normal.y;
-
-				//if (normal.y > maxSlope)
-				//	maxSlope = normal.y;
 			}
 		}
-
-		//// color pass
-		//for (int i = 0; i < size; i++) {
-		//	for (int j = 0; j < size; j++) {
-
-		//		int randomScale = std::rand() % 4;
-
-		//		int indexInColorMap = (i * size + j) * 4 + 2;
-		//		glm::vec3 normal = Terrain::getNormal(j, i, 0, 2, size, heights);
-		//		int baseIndex;
-		//		int overlayIndex;
-		//		int scale;
-		//		Terrain::slopeToIndex(normal, minSlope, maxSlope, baseIndex, overlayIndex, scale);
-		//		unsigned char colors = (baseIndex << 4u) + overlayIndex;
-		//		unsigned char scaleVal = scale << 5u;
-		//		unsigned char uvScale = randomScale << 3u;
-		//		mipmaps[0][indexInColorMap] = colors;
-		//		mipmaps[0][indexInColorMap + 1] = scaleVal + uvScale;
-		//		
-		//	}
-		//}
 
 		for (int level = 1; level < totalLevel; level++) {
 
 			size /= 2;
 			mipmaps[level] = new unsigned char[size * size * 2];
-
-			//float minSlope = 1.f;
-			//float maxSlope = 0.f;
 
 			// height pass
 			for (int i = 0; i < size; i++) {
@@ -1616,41 +1509,9 @@ namespace Core {
 					int indexInCoarserLevel = (i * size + j) * 2;
 					mipmaps[level][indexInCoarserLevel] = mipmaps[level - 1][indexInFinerLevel];
 					mipmaps[level][indexInCoarserLevel + 1] = mipmaps[level - 1][indexInFinerLevel + 1];
-					//mipmaps[level][indexInCoarserLevel + 2] = mipmaps[level - 1][indexInFinerLevel + 2];
-					//mipmaps[level][indexInCoarserLevel + 3] = mipmaps[level - 1][indexInFinerLevel + 3];
 				}
 			}
 
-			//// find max and min slope
-			//for (int i = 0; i < size; i++) {
-			//	for (int j = 0; j < size; j++) {
-
-			//		glm::vec3 normal = Terrain::getNormal(j, i, level, 4, size, mipmaps[level]);
-
-			//		if (normal.y < minSlope)
-			//			minSlope = normal.y;
-
-			//		if (normal.y > maxSlope)
-			//			maxSlope = normal.y;
-			//	}
-			//}
-
-			//// color pass
-			//for (int i = 0; i < size; i++) {
-			//	for (int j = 0; j < size; j++) {
-
-			//		int indexInMipmap = (i * size + j) * 4 + 2;
-			//		glm::vec3 normal = Terrain::getNormal(j, i, level, 4, size, mipmaps[level]);
-			//		int baseIndex;
-			//		int overlayIndex;
-			//		int scale;
-			//		Terrain::slopeToIndex(normal, minSlope, maxSlope, baseIndex, overlayIndex, scale);
-			//		unsigned char colors = (baseIndex << 4u) + overlayIndex;
-			//		unsigned char scaleVal = scale << 5u;
-			//		mipmaps[0][indexInMipmap] = colors;
-			//		mipmaps[0][indexInMipmap + 1] = scaleVal;
-			//	}
-			//}
 		}
 
 		return mipmaps;
@@ -1672,10 +1533,6 @@ namespace Core {
 				for (int c = 0; c < channels; c++)
 					heightImage[newIndex + c] = texture[baseIndex + c];
 
-				/*int baseCoord = ((z + coord_z) * baseTileSize + (x + coord_x)) * 2;
-				int newCoord = (z * newTileSize + x) * 2;
-				heightImage[newCoord] = texture[baseCoord];
-				heightImage[newCoord + 1] = texture[baseCoord + 1];*/
 			}
 		}
 
@@ -1683,27 +1540,6 @@ namespace Core {
 		unsigned int height = newTileSize;
 		std::string imagePath = name + '_' + std::to_string(level) + '_' + std::to_string(ind_z) + '_' + std::to_string(ind_x) + "_.png";
 		lodepng::encode(&imagePath[0], heightImage, width, height, LodePNGColorType::LCT_GREY, 16);
-
-		//TextureFile::encodeTextureFile(width, height, heightImage, &imagePath[0]);
-
-		//std::vector<unsigned char> heightImage(newTileSize * newTileSize);
-
-		//int coord_x = ind_x * newTileSize;
-		//int coord_z = ind_z * newTileSize;
-
-		//for (int z = 0; z < newTileSize; z++) {
-		//	for (int x = 0; x < newTileSize; x++) {
-
-		//		int baseCoord = ((z + coord_z) * baseTileSize + (x + coord_x));
-		//		int newCoord = (z * newTileSize + x);
-		//		heightImage[newCoord] = heights[baseCoord];
-		//	}
-		//}
-
-		//unsigned int width = newTileSize;
-		//unsigned int height = newTileSize;
-		//std::string imagePath = "heightmaps/map_" + std::to_string(level) + '_' + std::to_string(ind_z) + '_' + std::to_string(ind_x) + "_.png";
-		//TextureFile::encodeTextureFile8Bits(width, height, heightImage, &imagePath[0]);
 	}
 
 	void Terrain::createHeightmapImageFile(unsigned char* heights, int level, int newTileSize, int baseTileSize, int ind_x, int ind_z) {
@@ -1721,47 +1557,17 @@ namespace Core {
 				int newCoord = (z * newTileSize + x) * numChannels;
 				heightImage[newCoord] = heights[baseCoord];
 				heightImage[newCoord + 1] = heights[baseCoord + 1];
-				//heightImage[newCoord + 2] = heights[baseCoord + 2];
-				//heightImage[newCoord + 3] = heights[baseCoord + 3];
 			}
 		}
 
 		unsigned int width = newTileSize;
 		unsigned int height = newTileSize;
 		std::string imagePath = "resources/textures/terrain/heightmaps/map_" + std::to_string(level) + '_' + std::to_string(ind_z) + '_' + std::to_string(ind_x) + "_.png";
-		//TextureFile::encodeTextureFile(width, height, heightImage, &imagePath[0]);
-		//lodepng::State state;
 		lodepng::encode(imagePath, heightImage, width, height, LodePNGColorType::LCT_GREY, 16);
 
-		//std::vector<unsigned char> heightImage(newTileSize * newTileSize);
-
-		//int coord_x = ind_x * newTileSize;
-		//int coord_z = ind_z * newTileSize;
-
-		//for (int z = 0; z < newTileSize; z++) {
-		//	for (int x = 0; x < newTileSize; x++) {
-
-		//		int baseCoord = ((z + coord_z) * baseTileSize + (x + coord_x));
-		//		int newCoord = (z * newTileSize + x);
-		//		heightImage[newCoord] = heights[baseCoord];
-		//	}
-		//}
-
-		//unsigned int width = newTileSize;
-		//unsigned int height = newTileSize;
-		//std::string imagePath = "heightmaps/map_" + std::to_string(level) + '_' + std::to_string(ind_z) + '_' + std::to_string(ind_x) + "_.png";
-		//TextureFile::encodeTextureFile8Bits(width, height, heightImage, &imagePath[0]);
 	}
 
 	void Terrain::divideTextureStack(unsigned char** textureStack, int size, int patchSize, int channelCount, std::string name, int totalLevel) {
-
-		//int mipCount = 0;
-		//int sizeIterator = size;
-
-		//while (sizeIterator >= patchSize) {
-		//	sizeIterator /= 2;
-		//	mipCount++;
-		//}
 
 		int res = size;
 

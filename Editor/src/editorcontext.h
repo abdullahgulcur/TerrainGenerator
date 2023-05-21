@@ -4,8 +4,6 @@
 #include "menu.h"
 #include "scenecamera.h"
 
-//using namespace Core;
-
 namespace Editor {
 
 	class EditorContext {

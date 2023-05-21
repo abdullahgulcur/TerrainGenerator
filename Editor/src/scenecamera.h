@@ -8,6 +8,8 @@
 
 #include "glfwcontext.h"
 
+// todo: camera starts at 10k, 10k, limit movement
+
 namespace Core {
 
 	class CoreContext;

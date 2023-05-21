@@ -21,9 +21,8 @@ namespace Core {
 	///  TODO:
 	///  View frustum culling
 	///  faster file read for heightmaps
-	///  merge functions in single func
+	///  merge functions in a single func
 	///  less data
-	///  code review
 	/// </summary>
 
 	class CoreContext;
@@ -42,6 +41,22 @@ namespace Core {
 
 		glm::vec3 cameraPosition;
 
+		// no streaming
+		// one octree 
+		// custom structs for foliage
+		// 
+		// grass 0 transforms
+		// grass 1 transforms
+		// grass 2 transforms
+		// 
+		// bush 0 transforms
+		// bush 1 transforms
+		// bush 2 transforms
+		//
+		// tree 0 transforms
+		// tree 1 transforms
+		// tree 2 transforms
+
 	public:
 
 		glm::vec2* blockPositions;
@@ -52,10 +67,8 @@ namespace Core {
 		glm::vec2 smallSquarePosition;
 
 		AABB_Box* blockAABBs;
-		//AABB_Box* ringfixupAABBs;
 
 		unsigned short clipmapResolution = 120;
-		//unsigned short clipmapLevel = 4;
 
 		unsigned int programID;
 		unsigned int elevationMapTexture;
@@ -98,7 +111,6 @@ namespace Core {
 		unsigned char** mipStack;
 
 		// in ui 
-		float displacementMapScale = 0.12f;
 		glm::vec3 lightDir;
 
 		float maxFog = 0.37f;
@@ -202,8 +214,7 @@ namespace Core {
 		void divideTerrainHeightmaps(unsigned char** heightMapList, int width, int totalLevel);
 		void divideTextureStack(unsigned char** textureStack, int size, int patchSize, int channelCount, std::string name, int totalLevel);
 		void createTextureImageFile(unsigned char* texture, int level, int channels, std::string name, int newTileSize, int baseTileSize, int ind_x, int ind_z);
-		void loadTextures(std::vector<Texture*>& albedoTerrainTextureList, std::vector<Texture*>& normalTerrainTextureList, Texture* noise0, Texture* noise1);
-		void createAlbedoMapTextureArray();
+		void loadTextures();
 		unsigned char* remapHeightmap(unsigned char* heightmap, int size);
 		AABB_Box getBoundingBoxOfClipmap1(int clipmapIndex, int totalLevel);
 	};

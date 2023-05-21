@@ -3,7 +3,7 @@
 #include "corecontext.h"
 #include "filesystem.h"
 #include "entity.h"
-#include "terrain.h"
+#include "component/terrain.h"
 
 using namespace Core;
 
@@ -18,7 +18,7 @@ namespace Application {
 
 		FileSystem* fileSystem = CoreContext::instance->fileSystem;
 
-		Cubemap* cubemap = fileSystem->loadCubemap("resources/cubemaps/sky.hdr");
+		/*Cubemap* cubemap = fileSystem->loadCubemap("resources/cubemaps/sky.hdr");
 		Mesh* sphereMesh = fileSystem->loadMesh("resources/meshes/sphere.obj");
 		Mesh* cubeMesh = fileSystem->loadMesh("resources/meshes/cube.obj");
 		Texture* cliffTexture = fileSystem->loadTexture("resources/textures/terrain/cliff_1_a.DDS");
@@ -54,24 +54,24 @@ namespace Application {
 		}
 
 		Texture* noise0 = fileSystem->loadTexture("resources/textures/terrain/noise/gold_a.png");
-		Texture* noise1 = fileSystem->loadTexture("resources/textures/terrain/noise/noiseTexture.png");
+		Texture* noise1 = fileSystem->loadTexture("resources/textures/terrain/noise/noiseTexture.png");*/
 
-		Scene* scene = CoreContext::instance->scene; // we need default cubemap...
-		scene->cubemap = cubemap;
+		//Scene* scene = CoreContext::instance->scene; // we need default cubemap...
+		//scene->cubemap = cubemap;
 
-		Entity* terrainEnt = new Entity("Terrain");
-		Terrain* terrainComp = terrainEnt->addComponent<Terrain>();
-		terrainComp->loadTextures(albedoTerrainTextureList, normalTerrainTextureList, noise0, noise1);
-		scene->entity = terrainEnt;
+		//Entity* terrainEnt = new Entity("Terrain");
+		//Terrain* terrainComp = terrainEnt->addComponent<Terrain>();
+		//terrainComp->loadTextures(albedoTerrainTextureList, normalTerrainTextureList, noise0, noise1);
+		//scene->entity = terrainEnt;
 
-		scene->start(); // yeri degisebilir. to the core...
+		//scene->start(); // yeri degisebilir. to the core...
 	}
 
 	void AppContext::update(float dt) {
 
-		Scene* scene = CoreContext::instance->scene;
+		//Scene* scene = CoreContext::instance->scene;
 
-		scene->update(dt); // yeri degisebilir. to the core...
+		//scene->update(dt); // yeri degisebilir. to the core...
 	}
 
 }
