@@ -6,15 +6,10 @@
 #include "GLM/glm.hpp"
 #include "cubemap.h"
 
-#include "component/meshrenderer.h"
 #include "component/terrain.h"
-#include "component/camera.h"
-#include "component/transform.h"
 
 
 namespace Core {
-
-	class Entity;
 
 	struct __declspec(dllexport) DirectionalLight {
 		glm::vec3 direction;
@@ -23,13 +18,10 @@ namespace Core {
 	};
 
 	struct CameraInfo {
-		unsigned int FBO;
 		glm::mat4 VP;
 		glm::mat4 projection;
 		glm::mat4 view;
 		glm::vec3 camPos;
-		unsigned int width;
-		unsigned int height;
 		glm::vec4 planes[6];
 	};
 
@@ -62,41 +54,45 @@ namespace Core {
 		// global volume
 	    // light
 
+		// FRAMEBUFFER ----
+		unsigned int width;
+		unsigned int height;
+		unsigned int screenQuadVAO;
+
+		unsigned int filterTextureBuffer;
+		unsigned int filterFramebufferProgramID;
+		unsigned int filterFBO;
+		unsigned int filterRBO;
+
+		unsigned int textureBuffer;
+		unsigned int FBO;
+		unsigned int RBO;
+		unsigned int framebufferProgramID;
+		// ----------------
+
+		Terrain* terrain = NULL; // void ptr
+
 		Cubemap* cubemap;
 
 		DirectionalLight directionalLight;
 		CameraInfo cameraInfo;
 
-		//Entity* entity;
-
-		Entity* root;
-
+		int activeSceneIndex; // EDITOR ONLY
 
 		Scene();
 		~Scene();
 		void start();
 		void update(float dt);
-
-		bool saveEntities(std::string filePath);
-		void saveEntitiesRecursively(Transform* parent, rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entityNode);
-		void loadEntities(std::string filePath);
-		//void renameFile(std::string path, std::string name);
-		void loadEntitiesRecursively(rapidxml::xml_node<>* parentNode, Entity* parent);
-		bool saveTransformComponent(rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, Transform* transform);
-		bool loadTransformComponent(Entity* ent, rapidxml::xml_node<>* entNode);
-		bool saveMeshRendererComponent(rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, MeshRenderer* meshRenderer);
-		bool loadMeshRendererComponent(Entity* ent, rapidxml::xml_node<>* entNode);
-		//bool saveGameCameraComponent(rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, Camera* camera);
-		//bool loadGameCameraComponent(Entity* ent, rapidxml::xml_node<>* entNode);
-		bool saveTerrainComponent(rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, Terrain* terrain);
-		bool loadTerrainComponent(Entity* ent, rapidxml::xml_node<>* entNode);
-		//bool saveParticleSystemComponent(rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, ParticleSystem* particleSystem);
-		//bool loadParticleSystemComponent(Entity* ent, rapidxml::xml_node<>* entNode);
-
-		Entity* newEntity(std::string name);
-		Entity* newEntity(std::string name, Entity* parent);
-		Entity* newEntity(Entity* entity, Entity* parent);
-		Entity* duplicate(Entity* entity);
-		void cloneRecursively(Entity* copied, Entity* parent);
+		static int getActiveSceneIndex();
+		static std::string getActiveScenePath();
+		static void setActiveSceneIndex(int index);
+		static void changeScene(int index);
+		void setSize(int width, int height);
+		void destroyContent();
+		bool saveScene(std::string filePath);
+		void loadScene(std::string filePath);
+		bool saveTerrain(rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, Terrain* terrain);
+		Terrain* loadTerrain(rapidxml::xml_node<>* entNode);
+		void setFrameBuffer(int width, int height);
 	};
 }

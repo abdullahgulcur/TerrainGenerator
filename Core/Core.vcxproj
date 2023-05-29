@@ -168,14 +168,9 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
-    <ClInclude Include="src\component\camera.h" />
-    <ClInclude Include="src\component\component.h" />
-    <ClInclude Include="src\component\meshrenderer.h" />
     <ClInclude Include="src\component\terrain.h" />
-    <ClInclude Include="src\component\transform.h" />
     <ClInclude Include="src\corecontext.h" />
     <ClInclude Include="src\cubemap.h" />
-    <ClInclude Include="src\entity.h" />
     <ClInclude Include="src\filesystem.h" />
     <ClInclude Include="src\glewcontext.h" />
     <ClInclude Include="src\glfwcontext.h" />
@@ -560,7 +555,6 @@
     <ClInclude Include="src\include\rapidXML\rapidxml_print.hpp" />
     <ClInclude Include="src\include\rapidXML\rapidxml_utils.hpp" />
     <ClInclude Include="src\include\stb_image.h" />
-    <ClInclude Include="src\material.h" />
     <ClInclude Include="src\mesh.h" />
     <ClInclude Include="src\renderer.h" />
     <ClInclude Include="src\scene.h" />
@@ -575,20 +569,14 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="src\component\camera.cpp" />
-    <ClCompile Include="src\component\component.cpp" />
-    <ClCompile Include="src\component\meshrenderer.cpp" />
     <ClCompile Include="src\component\terrain.cpp" />
-    <ClCompile Include="src\component\transform.cpp" />
     <ClCompile Include="src\corecontext.cpp" />
     <ClCompile Include="src\cubemap.cpp" />
-    <ClCompile Include="src\entity.cpp" />
     <ClCompile Include="src\filesystem.cpp" />
     <ClCompile Include="src\glewcontext.cpp" />
     <ClCompile Include="src\glfwcontext.cpp" />
     <ClCompile Include="src\include\glm\detail\glm.cpp" />
     <ClCompile Include="src\include\lodepng\lodepng.cpp" />
-    <ClCompile Include="src\material.cpp" />
     <ClCompile Include="src\mesh.cpp" />
     <ClCompile Include="src\renderer.cpp" />
     <ClCompile Include="src\scene.cpp" />

@@ -10,13 +10,23 @@ namespace Editor {
 
 	SceneCamera::SceneCamera() {
 
-		SceneCamera::load("database/scenecamera.xml");
+		SceneCamera::load();
 		rotationSpeed *= generalSpeed;
 		rotationSpeed *= generalSpeed;
 		translationSpeed *= generalSpeed;
 		translationSpeed *= generalSpeed;
 		scrollSpeed *= generalSpeed;
 		fov = 60;
+
+		SceneCamera::startMatrices();
+	}
+
+	SceneCamera::~SceneCamera() {
+
+		SceneCamera::save();
+	}
+
+	void SceneCamera::startMatrices() {
 
 		glm::vec3 direction(cos(verticalAngle) * sin(horizontalAngle), sin(verticalAngle), cos(verticalAngle) * cos(horizontalAngle));
 		glm::vec3 right = glm::vec3(sin(horizontalAngle - 3.14f / 2.0f), 0, cos(horizontalAngle - 3.14f / 2.0f));
@@ -27,22 +37,25 @@ namespace Editor {
 		SceneCamera::frustum(projectionViewMatrix);
 	}
 
-	SceneCamera::~SceneCamera() {
+	void SceneCamera::changeSceneCamera() {
 
-		SceneCamera::save("database/scenecamera.xml");
+		SceneCamera::load();
+		SceneCamera::startMatrices();
 	}
 
 	void SceneCamera::init(int width, int height) {
 
-		SceneCamera::createFBO(width, height);
+		//SceneCamera::createFBO(width, height);
 	}
 
-	bool SceneCamera::load(std::string path) {
+	bool SceneCamera::load() {
+
+		std::string path = "database/scenecamera_" + std::to_string(Scene::getActiveSceneIndex()) + ".xml";
 
 		std::ifstream file(path);
 
 		if (file.fail()) {
-			SceneCamera::save(path);
+			SceneCamera::save();
 			return false;
 		}
 
@@ -186,16 +199,7 @@ namespace Editor {
 		}
 	}
 
-	void SceneCamera::createFBO(int sizeX, int sizeY) {
 
-		CoreContext::instance->glewContext->createFrameBuffer(FBO, RBO, textureBuffer, 1920, 1080); // son iki parametre de degismeli !!!
-	}
-
-	void SceneCamera::recreateFBO(int sizeX, int sizeY) {
-
-		CoreContext::instance->glewContext->createFrameBuffer(FBO, RBO, textureBuffer, sizeX, sizeY);
-		SceneCamera::updateProjectionMatrix(sizeX, sizeY);
-	}
 
 	void SceneCamera::updateProjectionMatrix(int sizeX, int sizeY) {
 
@@ -296,7 +300,9 @@ namespace Editor {
 		return true;
 	}
 
-	bool SceneCamera::save(std::string path) {
+	bool SceneCamera::save() {
+
+		std::string path = "database/scenecamera_" + std::to_string(Scene::getActiveSceneIndex()) + ".xml";
 
 		rapidxml::xml_document<> doc;
 		rapidxml::xml_node<>* decl = doc.allocate_node(rapidxml::node_declaration);

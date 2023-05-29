@@ -60,31 +60,29 @@ namespace Editor {
 
 		glm::vec4 planes[6];
 
-		unsigned int textureBuffer;
-		unsigned int FBO;
-		unsigned int RBO;
+
 
 		float horizontalAngle = 0.f;
 		float verticalAngle = 0.f;
 		glm::vec3 position = glm::vec3(0, 0, -5);
 
-		unsigned int width;
-		unsigned int height;
+		//unsigned int width;
+		//unsigned int height;
 
 		SceneCamera();
 		~SceneCamera();
+		void startMatrices();
+		void changeSceneCamera();
 		void init(int width, int height);
 		void update(float dt);
 		void controlMouse(float dt);
 		void teleportMouse(glm::vec2& mousePos, float& scenePosX, float& scenePosY, float& sceneRegionX,
 			float& sceneRegionY, float& offset, bool& mouseTeleport);
 		void frustum(glm::mat4& view_projection);
-		void createFBO(int sizeX, int sizeY);
-		void recreateFBO(int sizeX, int sizeY);
 		void updateProjectionMatrix(int sizeX, int sizeY);
 		bool intersectsAABB(glm::vec3 start, glm::vec3 end);
-		bool load(std::string path);
-		bool save(std::string path);
+		bool load();
+		bool save();
 	};
 
 }

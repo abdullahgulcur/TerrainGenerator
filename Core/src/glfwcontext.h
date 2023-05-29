@@ -21,7 +21,7 @@ namespace Core {
 		GlfwContext();
 		~GlfwContext();
 		void update(float dt);
-		//void loadTitleBarIcon();
+		void loadTitleBarIcon();
 		void end();
 		bool getOpen();
 		void terminateGLFW();

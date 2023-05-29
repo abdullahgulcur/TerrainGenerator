@@ -36,7 +36,7 @@ namespace Core {
 		glfwSetInputMode(GLFW_window, GLFW_STICKY_KEYS, GL_TRUE);
 		glfwSetInputMode(GLFW_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 
-		//GlfwContext::loadTitleBarIcon();
+		GlfwContext::loadTitleBarIcon();
 
 		glfwSetScrollCallback(GLFW_window, GlfwContext::scroll_callback);
 		glfwSetKeyCallback(GLFW_window, GlfwContext::key_callback);
@@ -47,20 +47,20 @@ namespace Core {
 		GlfwContext::terminateGLFW();
 	}
 
-	/*void GlfwContext::loadTitleBarIcon() {
+	void GlfwContext::loadTitleBarIcon() {
 
 		GLFWimage image;
 		unsigned width;
 		unsigned height;
 
 		std::vector<unsigned char> img;
-		unsigned error = lodepng::decode(img, width, height, "C:/Projects/Fury/Editor/resource/icons/material.png");
+		unsigned error = lodepng::decode(img, width, height, "resources/editor/icons/material.png");
 
 		image.pixels = &img[0];
 		image.width = width;
 		image.height = height;
 		glfwSetWindowIcon(GLFW_window, 1, &image);
-	}*/
+	}
 
 	void GlfwContext::update(float dt) {
 

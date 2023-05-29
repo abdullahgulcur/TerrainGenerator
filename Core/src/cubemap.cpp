@@ -16,6 +16,14 @@ namespace Core {
 		Cubemap::createCubemapTextures(path);
 	}
 
+	Cubemap::~Cubemap() {
+
+		glDeleteTextures(1, &envCubemap);
+		glDeleteTextures(1, &irradianceMap);
+		glDeleteTextures(1, &prefilterMap);
+		glDeleteTextures(1, &brdfLUTTexture);
+	}
+
 	// ref: https://learnopengl.com/PBR/IBL/Specular-IBL
 	void Cubemap::createCubemapTextures(std::string path) {
 

@@ -17,6 +17,7 @@ namespace Core {
 		unsigned int brdfLUTTexture = 0;
 
 		Cubemap(std::string path);
+		~Cubemap();
 		void createCubemapTextures(std::string path);
 		
 	};

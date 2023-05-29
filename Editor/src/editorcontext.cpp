@@ -24,7 +24,7 @@ namespace Editor {
 	void EditorContext::init() {
 
 		menu->init();
-		camera->init(menu->sceneRect.x, menu->sceneRect.y);
+		//camera->init(menu->sceneRect.x, menu->sceneRect.y);
 	}
 
 	void EditorContext::update(float dt) {
@@ -34,13 +34,10 @@ namespace Editor {
 
 		// scene update
 		CameraInfo cameraInfo;
-		cameraInfo.FBO = camera->FBO;
 		cameraInfo.VP = camera->projectionViewMatrix;
 		cameraInfo.projection = camera->ProjectionMatrix;
 		cameraInfo.view = camera->ViewMatrix;
 		cameraInfo.camPos = camera->position;
-		cameraInfo.width = camera->width;
-		cameraInfo.height = camera->height;
 		for (int i = 0; i < 6; i++)
 			cameraInfo.planes[i] = camera->planes[i];
 

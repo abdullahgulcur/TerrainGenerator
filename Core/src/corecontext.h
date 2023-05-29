@@ -20,6 +20,7 @@ namespace Core {
 		GlewContext* glewContext = NULL;
 		FileSystem* fileSystem = NULL;
 		Renderer* renderer = NULL;
+
 		Scene* scene = NULL;
 
 		CoreContext();

@@ -3,7 +3,6 @@
 #include "GL/glew.h"
 #include "corecontext.h"
 #include "glewcontext.h"
-#include "entity.h"
 #include "component/terrain.h"
 
 namespace Core {
@@ -22,40 +21,18 @@ namespace Core {
 
         Scene* scene = CoreContext::instance->scene;
 
-        glBindFramebuffer(GL_FRAMEBUFFER, scene->cameraInfo.FBO);
+        glBindFramebuffer(GL_FRAMEBUFFER, scene->FBO);
         glEnable(GL_DEPTH_TEST); // enable depth testing (is disabled for rendering screen-space quad)
         glDepthFunc(GL_LEQUAL); // set depth function to less than AND equal for skybox depth trick.
 
         glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS); // enable depth testing (is disabled for rendering screen-space quad)
-        glViewport(0, 0, scene->cameraInfo.width, scene->cameraInfo.height);
+        glViewport(0, 0, scene->width, scene->height);
         glClearColor(0.3f, 0.3f, 0.3f, 0.f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		std::stack<Entity*> entStack;
-		entStack.push(scene->root);
-
-		while (!entStack.empty()) {
-
-			Entity* popped = entStack.top();
-			entStack.pop();
-
-			for (Transform*& child : popped->transform->children)
-				entStack.push(child->entity);
-
-			Terrain* terrain = popped->getComponent<Terrain>();
-			if (terrain != NULL) {
-
-				//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-				//terrain->update(cameraInfo.camPos, dt);
-				terrain->onDraw(scene->cameraInfo.VP, scene->cameraInfo.camPos);
-			}
-
-			//if (ParticleSystem* particleSystem = popped->getComponent<ParticleSystem>())
-			//	particleSystem->onDraw(cameraInfo.VP, cameraInfo.camPos);
-
-			if (MeshRenderer* renderer = popped->getComponent<MeshRenderer>())
-				renderer->update(dt);
-
+		if (Terrain* terrain = scene->terrain) {
+			//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+			terrain->onDraw();
 		}
 
         // render skybox (render as last to prevent overdraw)
@@ -66,14 +43,30 @@ namespace Core {
         glBindTexture(GL_TEXTURE_CUBE_MAP, scene->cubemap->envCubemap);
 
         glDisable(GL_CULL_FACE);
-
         glBindVertexArray(envCubeVAO);
         glDrawArrays(GL_TRIANGLES, 0, 36);
         glBindVertexArray(0);
-
         glEnable(GL_CULL_FACE);
 
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+		// ------------------ FRAMEBUFFER PASS (FILTERS) ------------------
+
+#ifdef EDITOR_MODE
+		glBindFramebuffer(GL_FRAMEBUFFER, scene->filterFBO);
+#else
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+#endif
+		glDisable(GL_DEPTH_TEST);
+		glClear(GL_COLOR_BUFFER_BIT);
+		glUseProgram(scene->filterFramebufferProgramID);
+		glBindVertexArray(scene->screenQuadVAO);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, scene->textureBuffer);
+		glDrawArrays(GL_TRIANGLES, 0, 6);
+
+#ifdef EDITOR_MODE
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+#endif	
 	}
 
 	void Renderer::createEnvironmentCubeVAO() {

@@ -23,6 +23,10 @@ namespace Core {
 		//glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 	}
 
+	GlewContext::~GlewContext() {
+
+	}
+
 	void GlewContext::createFrameBuffer(unsigned int& FBO, unsigned int& RBO, unsigned int& textureBuffer, int sizeX, int sizeY) {
 
 		if (FBO != 0) {
