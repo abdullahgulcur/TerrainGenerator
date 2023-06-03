@@ -15,39 +15,37 @@ namespace Core {
 
 		FileSystem::loadCubemap("resources/cubemaps/hilly_terrain_01_puresky_4k.hdr");
 
-		FileSystem::loadTexture("resources/textures/terrain/soil_a.DDS");
-		FileSystem::loadTexture("resources/textures/terrain/mulch_a.DDS");
-		FileSystem::loadTexture("resources/textures/terrain/granite_a.DDS");
-		FileSystem::loadTexture("resources/textures/terrain/soil_rock_a.DDS");
-		FileSystem::loadTexture("resources/textures/terrain/sand_a.DDS");
-		FileSystem::loadTexture("resources/textures/terrain/lichened_rock_a.DDS");
+		FileSystem::loadTexture("resources/textures/terrain/cliffgranite_a.DDS");
+		FileSystem::loadTexture("resources/textures/terrain/groundforest_a.DDS");
+		FileSystem::loadTexture("resources/textures/terrain/groundsandy_a.DDS");
+		FileSystem::loadTexture("resources/textures/terrain/lichenedrock_a.DDS");
+		FileSystem::loadTexture("resources/textures/terrain/sandbeach_a.DDS");
+		FileSystem::loadTexture("resources/textures/terrain/soilmulch_a.DDS");
 
-		FileSystem::loadTexture("resources/textures/terrain/soil_n.DDS");
-		FileSystem::loadTexture("resources/textures/terrain/mulch_n.DDS");
-		FileSystem::loadTexture("resources/textures/terrain/granite_n.DDS");
-		FileSystem::loadTexture("resources/textures/terrain/soil_rock_n.DDS");
-		FileSystem::loadTexture("resources/textures/terrain/snow_fresh_n.DDS");
-		FileSystem::loadTexture("resources/textures/terrain/sand_n.DDS");
-		FileSystem::loadTexture("resources/textures/terrain/lichened_rock_n.DDS");
-		FileSystem::loadTexture("resources/textures/terrain/s1n.DDS");
+		FileSystem::loadTexture("resources/textures/terrain/cliffgranite_n.DDS");
+		FileSystem::loadTexture("resources/textures/terrain/groundforest_n.DDS");
+		FileSystem::loadTexture("resources/textures/terrain/groundsandy_n.DDS");
+		FileSystem::loadTexture("resources/textures/terrain/lichenedrock_n.DDS");
+		FileSystem::loadTexture("resources/textures/terrain/sandbeach_n.DDS");
+		FileSystem::loadTexture("resources/textures/terrain/soilmulch_n.DDS");
+		FileSystem::loadTexture("resources/textures/terrain/snowfresh_n.DDS");
+		FileSystem::loadTexture("resources/textures/terrain/snowpure_n.DDS");
 
 		FileSystem::loadTexture("resources/textures/terrain/gold_a.png");
 		FileSystem::loadTexture("resources/textures/terrain/noiseTexture.png");
 	}
 
-	Texture* FileSystem::loadTexture(std::filesystem::path entry) { // anisolevel vs, more parameters...
+	Texture* FileSystem::loadTexture(std::filesystem::path entry) {
 
 		Texture* texture = new Texture(entry.string());
 		textures.insert({ entry.stem().string(), texture });
-
 		return texture;
 	}
 
-	Mesh* FileSystem::loadMesh(std::filesystem::path entry) { // three lod params
+	Mesh* FileSystem::loadMesh(std::filesystem::path entry) {
 
 		Mesh* mesh = new Mesh(entry.string());
 		meshes.insert({ entry.stem().string(), mesh });
-
 		return mesh;
 	}
 
@@ -55,7 +53,6 @@ namespace Core {
 
 		Shader* shader = new Shader(entry.string());
 		shaders.insert({ entry.stem().string(), shader });
-
 		return shader;
 	}
 
@@ -63,7 +60,6 @@ namespace Core {
 
 		Cubemap* cubemap = new Cubemap(entry.string());
 		cubemaps.insert({ entry.stem().string(), cubemap });
-
 		return cubemap;
 	}
 

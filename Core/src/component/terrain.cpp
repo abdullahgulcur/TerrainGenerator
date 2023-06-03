@@ -17,8 +17,6 @@
 #include "gl/glew.h"
 #include "lodepng/lodepng.h"
 
-using namespace std::chrono;
-
 namespace Core {
 
 	Terrain::Terrain() {
@@ -27,28 +25,17 @@ namespace Core {
 		fogColor = glm::vec3(190.f / 255, 220.f / 255, 1.f);
 		color0 = glm::vec3(0.95f, 0.95f, 0.95f);
 		color1 = glm::vec3(0.85f, 0.85f, 0.85f);
-
-		std::srand((unsigned)time(0)); //?
 	}
 
 	Terrain::~Terrain() {
 
-		glDeleteTextures(1, &elevationMapTexture);
+		glDeleteTextures(1, &elevationMapTextureArray);
 		glDeleteVertexArrays(1, &blockVAO);
 		glDeleteVertexArrays(1, &ringFixUpVerticalVAO);
 		glDeleteVertexArrays(1, &ringFixUpHorizontalVAO);
 		glDeleteVertexArrays(1, &smallSquareVAO);
 		glDeleteVertexArrays(1, &outerDegenerateVAO);
 		glDeleteVertexArrays(1, &interiorTrimVAO);
-
-		delete[] blockPositions;
-		delete[] ringFixUpPositions;
-		delete[] ringFixUpVerticalPositions;
-		delete[] interiorTrimPositions;
-		delete[] outerDegeneratePositions;
-		delete[] rotAmounts;
-		delete[] blockAABBs;
-		delete[] clipmapStartIndices;
 
 		for (int i = 0; i < CLIPMAP_LEVEL; i++)
 			delete[] heightmapStack[i];
@@ -61,7 +48,54 @@ namespace Core {
 
 	void Terrain::start() {
 
-		std::string path = "resources/textures/terrain/terrain.png";
+		// limit camera position to the remapped terrain region
+		cameraPosition = glm::clamp(CoreContext::instance->scene->cameraInfo.camPos, glm::vec3(MAP_SIZE * 2 + 1, 0, MAP_SIZE * 2 + 1), glm::vec3(MAP_SIZE * 3 - 1, 0, MAP_SIZE * 3 - 1));
+
+		Terrain::initHeightmapStack("resources/textures/terrain/terrain.png");
+		Terrain::createLowResolutionHeightmapStack();
+		Terrain::generateTerrainClipmapsVertexArrays();
+		Terrain::initShaders("resources/shaders/terrain/terrain.vert", "resources/shaders/terrain/terrain.frag");
+		Terrain::loadTerrainHeightmapOnInit(cameraPosition, CLIPMAP_LEVEL);
+		Terrain::calculateBlockPositions(cameraPosition);
+		Terrain::initBlockAABBs();
+		Terrain::loadTextures();
+	}
+
+	void Terrain::initShaders(const char* vertexShader, const char* fragShader) {
+
+		terrainProgramID = Shader::loadShaders(vertexShader, fragShader);
+		glUseProgram(terrainProgramID);
+		glUniform1i(glGetUniformLocation(terrainProgramID, "heightmapArray"), 0);
+		glUniform1i(glGetUniformLocation(terrainProgramID, "irradianceMap"), 1);
+		glUniform1i(glGetUniformLocation(terrainProgramID, "macroTexture"), 2);
+		glUniform1i(glGetUniformLocation(terrainProgramID, "noiseTexture"), 3);
+		glUniform1i(glGetUniformLocation(terrainProgramID, "albedoT0"), 4);
+		glUniform1i(glGetUniformLocation(terrainProgramID, "albedoT1"), 5);
+		glUniform1i(glGetUniformLocation(terrainProgramID, "albedoT2"), 6);
+		glUniform1i(glGetUniformLocation(terrainProgramID, "albedoT3"), 7);
+		glUniform1i(glGetUniformLocation(terrainProgramID, "albedoT5"), 8);
+		glUniform1i(glGetUniformLocation(terrainProgramID, "albedoT6"), 9);
+		glUniform1i(glGetUniformLocation(terrainProgramID, "normalT0"), 10);
+		glUniform1i(glGetUniformLocation(terrainProgramID, "normalT1"), 11);
+		glUniform1i(glGetUniformLocation(terrainProgramID, "normalT2"), 12);
+		glUniform1i(glGetUniformLocation(terrainProgramID, "normalT3"), 13);
+		glUniform1i(glGetUniformLocation(terrainProgramID, "normalT4"), 14);
+		glUniform1i(glGetUniformLocation(terrainProgramID, "normalT5"), 15);
+		glUniform1i(glGetUniformLocation(terrainProgramID, "normalT6"), 16);
+		glUniform1i(glGetUniformLocation(terrainProgramID, "normalT7"), 17);
+	}
+
+	void Terrain::initBlockAABBs() {
+
+		for (int i = 0; i < CLIPMAP_LEVEL; i++)
+			for (int j = 0; j < 12; j++)
+				blockAABBs[12 * i + j] = Terrain::getBlockBoundingBox(i * 12 + j, i);
+		for (int i = 0; i < 4; i++)
+			blockAABBs[12 * CLIPMAP_LEVEL + i] = Terrain::getBlockBoundingBox(12 * CLIPMAP_LEVEL + i, 0);
+	}
+
+	void Terrain::initHeightmapStack(std::string path) {
+
 		std::vector<unsigned char> out;
 		unsigned int w, h;
 		lodepng::decode(out, w, h, path, LodePNGColorType::LCT_GREY, 16);
@@ -72,55 +106,11 @@ namespace Core {
 		unsigned char* heightmap = Terrain::resizeHeightmap(data, w);
 		unsigned char** heightMapList = Terrain::createMipmaps(heightmap, w * MEM_TILE_ONE_SIDE, CLIPMAP_LEVEL);
 		Terrain::createHeightmapStack(heightMapList, w * MEM_TILE_ONE_SIDE);
-		Terrain::createLowResolutionHeightmapStack();
-
-		blockPositions = new glm::vec2[12 * CLIPMAP_LEVEL + 4];
-		ringFixUpPositions = new glm::vec2[2 * CLIPMAP_LEVEL + 2];
-		ringFixUpVerticalPositions = new glm::vec2[2 * CLIPMAP_LEVEL + 2];
-		interiorTrimPositions = new glm::vec2[CLIPMAP_LEVEL];
-		outerDegeneratePositions = new glm::vec2[4 * CLIPMAP_LEVEL];
-		rotAmounts = new float[CLIPMAP_LEVEL];
-		blockAABBs = new AABB_Box[12 * CLIPMAP_LEVEL + 4];
-
-		Terrain::generateTerrainClipmapsVertexArrays();
-		Terrain::initShaders("resources/shaders/terrain/terrain.vert", "resources/shaders/terrain/terrain.frag");
-		cameraPosition = glm::clamp(CoreContext::instance->scene->cameraInfo.camPos, glm::vec3(8193, 0, 8193), glm::vec3(12287, 0, 12287));
-		Terrain::loadTerrainHeightmapOnInit(cameraPosition, CLIPMAP_LEVEL);
-		Terrain::calculateBlockPositions(cameraPosition);
-		Terrain::loadTextures();
-
-		// ayri bir fonksiyona ?
-		for (int i = 0; i < CLIPMAP_LEVEL; i++)
-			for (int j = 0; j < 12; j++)
-				blockAABBs[12 * i + j] = Terrain::getBoundingBoxOfClipmap(i * 12 + j, i);
-		for (int i = 0; i < 4; i++)
-			blockAABBs[12 * CLIPMAP_LEVEL + i] = Terrain::getBoundingBoxOfClipmap(12 * CLIPMAP_LEVEL + i, 0);
 	}
 
-	void Terrain::initShaders(const char* vertexShader, const char* fragShader) {
-
-		programID = Shader::loadShaders(vertexShader, fragShader);
-		glUseProgram(programID);
-		glUniform1i(glGetUniformLocation(programID, "heightmapArray"), 0);
-		glUniform1i(glGetUniformLocation(programID, "irradianceMap"), 1);
-		glUniform1i(glGetUniformLocation(programID, "macroTexture"), 2);
-		glUniform1i(glGetUniformLocation(programID, "noiseTexture"), 3);
-		glUniform1i(glGetUniformLocation(programID, "albedoT0"), 4);
-		glUniform1i(glGetUniformLocation(programID, "albedoT1"), 5);
-		glUniform1i(glGetUniformLocation(programID, "albedoT2"), 6);
-		glUniform1i(glGetUniformLocation(programID, "albedoT3"), 7);
-		glUniform1i(glGetUniformLocation(programID, "albedoT5"), 8);
-		glUniform1i(glGetUniformLocation(programID, "albedoT6"), 9);
-		glUniform1i(glGetUniformLocation(programID, "normalT0"), 10);
-		glUniform1i(glGetUniformLocation(programID, "normalT1"), 11);
-		glUniform1i(glGetUniformLocation(programID, "normalT2"), 12);
-		glUniform1i(glGetUniformLocation(programID, "normalT3"), 13);
-		glUniform1i(glGetUniformLocation(programID, "normalT4"), 14);
-		glUniform1i(glGetUniformLocation(programID, "normalT5"), 15);
-		glUniform1i(glGetUniformLocation(programID, "normalT6"), 16);
-		glUniform1i(glGetUniformLocation(programID, "normalT7"), 17);
-	}
-
+	/*
+	* Loads whole heightmap from heightmap stack.
+	*/
 	void Terrain::loadTerrainHeightmapOnInit(glm::vec3 camPos, int clipmapLevel) {
 
 		unsigned char** terrainStack = new unsigned char* [clipmapLevel];
@@ -136,1031 +126,18 @@ namespace Core {
 			delete[] terrainStack[i];
 		delete[] terrainStack;
 	}
-
-	void Terrain::loadHeightmapAtLevel(int level, glm::vec3 camPos, unsigned char* heightData) {
-
-		glm::ivec2 tileIndex = Terrain::getTileIndex(level, camPos);
-		glm::ivec2 tileStart = tileIndex - MEM_TILE_ONE_SIDE / 2;
-		glm::ivec2 border = tileStart % MEM_TILE_ONE_SIDE;
-
-		for (int i = 0; i < MEM_TILE_ONE_SIDE; i++) {
-
-			int startX = tileStart.x;
-
-			for (int j = 0; j < MEM_TILE_ONE_SIDE; j++) {
-
-				Terrain::writeHeightDataToGPUBuffer(border, glm::ivec2(startX, tileStart.y), MEM_TILE_ONE_SIDE * TILE_SIZE, heightData, level);
-				border.x++;
-				border.x %= MEM_TILE_ONE_SIDE;
-				startX++;
-			}
-
-			border.y++;
-			border.y %= MEM_TILE_ONE_SIDE;
-			tileStart.y++;
-		}
-
-		// DEBUG
-		//std::vector<unsigned char> out(TILE_SIZE * MEM_TILE_ONE_SIDE * TILE_SIZE * MEM_TILE_ONE_SIDE * 2);
-		//for (int i = 0; i < TILE_SIZE * MEM_TILE_ONE_SIDE * TILE_SIZE * MEM_TILE_ONE_SIDE * 2; i++)
-		//	out[i] = heights[level][i];
-
-		//unsigned int width = TILE_SIZE * MEM_TILE_ONE_SIDE;
-		//unsigned int height = TILE_SIZE * MEM_TILE_ONE_SIDE;
-		//std::string imagePath = "heights" + std::to_string(level) + ".png";
-		//TextureFile::encodeTextureFile(width, height, out, &imagePath[0]);
-	}
-
-	/*
-	* Any updates because of the camera movement. Nested grids positions, textures updates...
-	* TODO : make a basic job system
-	*/
-	void Terrain::update(float dt) {
-
-		glm::vec3 camPosition = glm::clamp(CoreContext::instance->scene->cameraInfo.camPos, glm::vec3(8193, 0, 8193), glm::vec3(12287, 0, 12287));
-		Terrain::calculateBlockPositions(camPosition);
-		Terrain::calculateBoundingBoxes(camPosition);
-		Terrain::streamTerrain(camPosition);
-		cameraPosition = camPosition;
-	}
-
-	/*
-	* Draw terrain
-	*/
-	void Terrain::onDraw() {
-
-		int programID = this->programID;
-
-		glm::vec3 camPos = CoreContext::instance->scene->cameraInfo.camPos;
-		glm::mat4& PV = CoreContext::instance->scene->cameraInfo.VP;
-
-		int blockVAO = this->blockVAO;
-		int ringFixUpVerticalVAO = this->ringFixUpVerticalVAO;
-		int ringFixUpHorizontalVAO = this->ringFixUpHorizontalVAO;
-		int smallSquareVAO = this->smallSquareVAO;
-		int interiorTrimVAO = this->interiorTrimVAO;
-		int outerDegenerateVAO = this->outerDegenerateVAO;
-
-		int blockIndiceCount = blockIndices.size();
-		int ringFixUpIndiceCount = ringFixUpVerticalIndices.size();
-		int ringFixUpVerticalIndiceCount = ringFixUpHorizontalIndices.size();
-		int smallSquareIndiceCount = smallSquareIndices.size();
-		int interiorTrimIndiceCount = interiorTrimIndices.size();
-		int outerDegenerateIndiceCount = outerDegenerateIndices.size();
-
-		Cubemap* cubemap = CoreContext::instance->scene->cubemap;
-
-		glUseProgram(programID);
-		glUniformMatrix4fv(glGetUniformLocation(programID, "PV"), 1, 0, &PV[0][0]);
-		glUniform3fv(glGetUniformLocation(programID, "camPos"), 1, &camPos[0]);
-		glUniform1f(glGetUniformLocation(programID, "texSize"), (float)TILE_SIZE * MEM_TILE_ONE_SIDE);
-
-		// Terrain Material Parameters
-		glUniform3f(glGetUniformLocation(programID, "lightDirection"), lightDir.x, lightDir.y, lightDir.z);
-		glUniform1f(glGetUniformLocation(programID, "lightPow"), lightPow);
-
-		glUniform1f(glGetUniformLocation(programID, "ambientAmount"), ambientAmount);
-		glUniform1f(glGetUniformLocation(programID, "specularPower"), specularPower);
-		glUniform1f(glGetUniformLocation(programID, "specularAmount"), specularAmount);
-					
-		glUniform1f(glGetUniformLocation(programID, "blendDistance"), blendDistance);
-		glUniform1f(glGetUniformLocation(programID, "blendAmount"), blendAmount);
-					
-		glUniform1f(glGetUniformLocation(programID, "scale_color0_dist0"), scale_color0_dist0);
-		glUniform1f(glGetUniformLocation(programID, "scale_color0_dist1"), scale_color0_dist1);
-					
-		glUniform1f(glGetUniformLocation(programID, "scale_color1_dist0"), scale_color1_dist0);
-		glUniform1f(glGetUniformLocation(programID, "scale_color1_dist1"), scale_color1_dist1);
-					
-		glUniform1f(glGetUniformLocation(programID, "scale_color2_dist0"), scale_color2_dist0);
-		glUniform1f(glGetUniformLocation(programID, "scale_color2_dist1"), scale_color2_dist1);
-					
-		glUniform1f(glGetUniformLocation(programID, "scale_color3_dist0"), scale_color3_dist0);
-		glUniform1f(glGetUniformLocation(programID, "scale_color3_dist1"), scale_color3_dist1);
-					
-		glUniform1f(glGetUniformLocation(programID, "scale_color4_dist0"), scale_color4_dist0);
-		glUniform1f(glGetUniformLocation(programID, "scale_color4_dist1"), scale_color4_dist1);
-					
-		glUniform1f(glGetUniformLocation(programID, "scale_color5_dist0"), scale_color5_dist0);
-		glUniform1f(glGetUniformLocation(programID, "scale_color5_dist1"), scale_color5_dist1);
-					
-		glUniform1f(glGetUniformLocation(programID, "scale_color6_dist0"), scale_color6_dist0);
-		glUniform1f(glGetUniformLocation(programID, "scale_color6_dist1"), scale_color6_dist1);
-					
-		glUniform1f(glGetUniformLocation(programID, "scale_color7_dist0"), scale_color7_dist0);
-		glUniform1f(glGetUniformLocation(programID, "scale_color7_dist1"), scale_color7_dist1);
-
-		glUniform1f(glGetUniformLocation(programID, "macroScale_0"), macroScale_0);
-		glUniform1f(glGetUniformLocation(programID, "macroScale_1"), macroScale_1);
-		glUniform1f(glGetUniformLocation(programID, "macroScale_2"), macroScale_2);
-		glUniform1f(glGetUniformLocation(programID, "macroAmount"), macroAmount);
-		glUniform1f(glGetUniformLocation(programID, "macroPower"), macroPower);
-		glUniform1f(glGetUniformLocation(programID, "macroOpacity"), macroOpacity);
-					
-		glUniform1f(glGetUniformLocation(programID, "overlayBlendScale0"), overlayBlendScale0);
-		glUniform1f(glGetUniformLocation(programID, "overlayBlendAmount0"), overlayBlendAmount0);
-		glUniform1f(glGetUniformLocation(programID, "overlayBlendPower0"), overlayBlendPower0);
-		glUniform1f(glGetUniformLocation(programID, "overlayBlendOpacity0"), overlayBlendOpacity0);
-					
-		glUniform1f(glGetUniformLocation(programID, "overlayBlendScale1"), overlayBlendScale1);
-		glUniform1f(glGetUniformLocation(programID, "overlayBlendAmount1"), overlayBlendAmount1);
-		glUniform1f(glGetUniformLocation(programID, "overlayBlendPower1"), overlayBlendPower1);
-		glUniform1f(glGetUniformLocation(programID, "overlayBlendOpacity1"), overlayBlendOpacity1);
-
-		glUniform1f(glGetUniformLocation(programID, "overlayBlendScale2"), overlayBlendScale2);
-		glUniform1f(glGetUniformLocation(programID, "overlayBlendAmount2"), overlayBlendAmount2);
-		glUniform1f(glGetUniformLocation(programID, "overlayBlendPower2"), overlayBlendPower2);
-		glUniform1f(glGetUniformLocation(programID, "overlayBlendOpacity2"), overlayBlendOpacity2);
-
-		glUniform3fv(glGetUniformLocation(programID, "color0"), 1, &color0[0]);
-		glUniform3fv(glGetUniformLocation(programID, "color1"), 1, &color1[0]);
-					
-		glUniform1f(glGetUniformLocation(programID, "slopeSharpness0"), slopeSharpness0);
-		glUniform1f(glGetUniformLocation(programID, "slopeSharpness1"), slopeSharpness1);
-					
-		glUniform1f(glGetUniformLocation(programID, "slopeBias0"), slopeBias0);
-		glUniform1f(glGetUniformLocation(programID, "slopeBias1"), slopeBias1);
-					
-		glUniform1f(glGetUniformLocation(programID, "heightBias0"), heightBias0);
-		glUniform1f(glGetUniformLocation(programID, "heightSharpness0"), heightSharpness0);
-		glUniform1f(glGetUniformLocation(programID, "heightBias1"), heightBias1);
-		glUniform1f(glGetUniformLocation(programID, "heightSharpness1"), heightSharpness1);
-					
-		glUniform1f(glGetUniformLocation(programID, "distanceNear"), distanceNear);
-		glUniform1f(glGetUniformLocation(programID, "fogBlendDistance"), fogBlendDistance);
-		glUniform1f(glGetUniformLocation(programID, "maxFog"), maxFog);
-		glUniform3fv(glGetUniformLocation(programID, "fogColor"), 1, &fogColor[0]);
-
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D_ARRAY, elevationMapTexture);
-		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_CUBE_MAP, cubemap->irradianceMap);
-		glActiveTexture(GL_TEXTURE2);
-		glBindTexture(GL_TEXTURE_2D, macroTexture);
-		glActiveTexture(GL_TEXTURE3);
-		glBindTexture(GL_TEXTURE_2D, noiseTexture);
-		
-		glActiveTexture(GL_TEXTURE4);
-		glBindTexture(GL_TEXTURE_2D, albedo0);
-		glActiveTexture(GL_TEXTURE5);
-		glBindTexture(GL_TEXTURE_2D, albedo1);
-		glActiveTexture(GL_TEXTURE6);
-		glBindTexture(GL_TEXTURE_2D, albedo2);
-		glActiveTexture(GL_TEXTURE7);
-		glBindTexture(GL_TEXTURE_2D, albedo3);
-		glActiveTexture(GL_TEXTURE8);
-		glBindTexture(GL_TEXTURE_2D, albedo5);
-		glActiveTexture(GL_TEXTURE9);
-		glBindTexture(GL_TEXTURE_2D, albedo6);
-		
-		glActiveTexture(GL_TEXTURE10);
-		glBindTexture(GL_TEXTURE_2D, normal0);
-		glActiveTexture(GL_TEXTURE11);
-		glBindTexture(GL_TEXTURE_2D, normal1);
-		glActiveTexture(GL_TEXTURE12);
-		glBindTexture(GL_TEXTURE_2D, normal2);
-		glActiveTexture(GL_TEXTURE13);
-		glBindTexture(GL_TEXTURE_2D, normal3);
-		glActiveTexture(GL_TEXTURE14);
-		glBindTexture(GL_TEXTURE_2D, normal4);
-		glActiveTexture(GL_TEXTURE15);
-		glBindTexture(GL_TEXTURE_2D, normal5);
-		glActiveTexture(GL_TEXTURE16);
-		glBindTexture(GL_TEXTURE_2D, normal6);
-		glActiveTexture(GL_TEXTURE17);
-		glBindTexture(GL_TEXTURE_2D, normal7);
-
-		glm::vec2* blockPositions = this->blockPositions;
-		glm::vec2* ringFixUpPositions = this->ringFixUpPositions;
-		glm::vec2* ringFixUpVerticalPositions = this->ringFixUpVerticalPositions;
-		glm::vec2* interiorTrimPositions = this->interiorTrimPositions;
-		glm::vec2* outerDegeneratePositions = this->outerDegeneratePositions;
-		float* rotAmounts = this->rotAmounts;
-		glm::vec2 smallSquarePosition = this->smallSquarePosition;
-
-		std::vector<TerrainVertexAttribs> instanceArray;
-
-		// BLOCKS
-
-		for (int i = 0; i < CLIPMAP_LEVEL; i++) {
-
-			for (int j = 0; j < 12; j++) {
-
-				glm::vec4 startInWorldSpace;
-				glm::vec4 endInWorldSpace;
-				AABB_Box aabb = blockAABBs[i * 12 + j];
-				startInWorldSpace = aabb.start;
-				endInWorldSpace = aabb.end;
-
-				if (Terrain::intersectsAABB(startInWorldSpace, endInWorldSpace)) {
-					TerrainVertexAttribs attribs;
-					attribs.level = i;
-					attribs.model = glm::mat4(1);
-					attribs.position = glm::vec2(blockPositions[i * 12 + j].x, blockPositions[i * 12 + j].y);
-					attribs.color = BLOCK_COLOR;
-					instanceArray.push_back(attribs);
-				}
-			}
-		}
-
-		for (int i = 0; i < 4; i++) {
-
-			glm::vec4 startInWorldSpace;
-			glm::vec4 endInWorldSpace;
-			AABB_Box aabb = blockAABBs[CLIPMAP_LEVEL * 12 + i];
-			startInWorldSpace = aabb.start;
-			endInWorldSpace = aabb.end;
-
-			if (Terrain::intersectsAABB(startInWorldSpace, endInWorldSpace)) {
-				TerrainVertexAttribs attribs;
-				attribs.level = 0;
-				attribs.model = glm::mat4(1);
-				attribs.position = glm::vec2(blockPositions[CLIPMAP_LEVEL * 12 + i].x, blockPositions[CLIPMAP_LEVEL * 12 + i].y);
-				attribs.color = BLOCK_COLOR;
-				instanceArray.push_back(attribs);
-			}
-		}
-
-		if (instanceArray.size()) {
-			Terrain::drawElementsInstanced(blockVAO, instanceArray, blockIndiceCount);
-			instanceArray.clear();
-		}
-
-		// RING FIXUP VERTICAL
-		for (int i = 0; i < CLIPMAP_LEVEL; i++) {
-
-			TerrainVertexAttribs attribs;
-			attribs.level = i;
-			attribs.model = glm::mat4(1);
-			attribs.color = FIXUP_VERTICAL_COLOR;
-
-			attribs.position = glm::vec2(ringFixUpPositions[i * 2 + 0].x, ringFixUpPositions[i * 2 + 0].y);
-			instanceArray.push_back(attribs);
-			attribs.position = glm::vec2(ringFixUpPositions[i * 2 + 1].x, ringFixUpPositions[i * 2 + 1].y);
-			instanceArray.push_back(attribs);
-		}
-
-		{
-			TerrainVertexAttribs attribs;
-			attribs.level = 0;
-			attribs.model = glm::mat4(1);
-			attribs.color = FIXUP_VERTICAL_COLOR;
-
-			attribs.position = glm::vec2(ringFixUpPositions[CLIPMAP_LEVEL * 2 + 0].x, ringFixUpPositions[CLIPMAP_LEVEL * 2 + 0].y);
-			instanceArray.push_back(attribs);
-			attribs.position = glm::vec2(ringFixUpPositions[CLIPMAP_LEVEL * 2 + 1].x, ringFixUpPositions[CLIPMAP_LEVEL * 2 + 1].y);
-			instanceArray.push_back(attribs);
-		}
-
-		Terrain::drawElementsInstanced(ringFixUpVerticalVAO, instanceArray, ringFixUpIndiceCount);
-		instanceArray.clear();
-
-		// RING FIXUP HORIZONTAL
-		for (int i = 0; i < CLIPMAP_LEVEL; i++) {
-
-			TerrainVertexAttribs attribs;
-			attribs.level = i;
-			attribs.model = glm::mat4(1);
-			attribs.color = FIXUP_HORIZONTAL_COLOR;
-
-			attribs.position = glm::vec2(ringFixUpVerticalPositions[i * 2 + 0].x, ringFixUpVerticalPositions[i * 2 + 0].y);
-			instanceArray.push_back(attribs);
-			attribs.position = glm::vec2(ringFixUpVerticalPositions[i * 2 + 1].x, ringFixUpVerticalPositions[i * 2 + 1].y);
-			instanceArray.push_back(attribs);
-		}
-
-		{
-			TerrainVertexAttribs attribs;
-			attribs.level = 0;
-			attribs.model = glm::mat4(1);
-			attribs.color = FIXUP_HORIZONTAL_COLOR;
-
-			attribs.position = glm::vec2(ringFixUpVerticalPositions[CLIPMAP_LEVEL * 2 + 0].x, ringFixUpVerticalPositions[CLIPMAP_LEVEL * 2 + 0].y);
-			instanceArray.push_back(attribs);
-			attribs.position = glm::vec2(ringFixUpVerticalPositions[CLIPMAP_LEVEL * 2 + 1].x, ringFixUpVerticalPositions[CLIPMAP_LEVEL * 2 + 1].y);
-			instanceArray.push_back(attribs);
-		}
-
-		Terrain::drawElementsInstanced(ringFixUpHorizontalVAO, instanceArray, ringFixUpVerticalIndiceCount);
-		instanceArray.clear();
-
-		// INTERIOR TRIM
-		for (int i = 0; i < CLIPMAP_LEVEL - 1; i++) {
-
-			glm::mat4 model = glm::rotate(glm::mat4(1), glm::radians(rotAmounts[i]), glm::vec3(0.0f, 1.0f, 0.0f));
-
-			TerrainVertexAttribs attribs;
-			attribs.level = i + 1;
-			attribs.model = model;
-			attribs.position = glm::vec2(interiorTrimPositions[i].x, interiorTrimPositions[i].y);
-			attribs.color = INTERIOR_TRIM_COLOR;
-			instanceArray.push_back(attribs);
-		}
-		Terrain::drawElementsInstanced(interiorTrimVAO, instanceArray, interiorTrimIndiceCount);
-		instanceArray.clear();
-
-		// OUTER DEGENERATE
-		for (int i = 0; i < CLIPMAP_LEVEL - 1; i++) {
-
-			glm::mat4 model = glm::mat4(1);
-
-			TerrainVertexAttribs attribs;
-			attribs.level = i;
-			attribs.model = model;
-			attribs.color = OUTER_DEGENERATE_COLOR;
-
-			attribs.position = glm::vec2(outerDegeneratePositions[i * 4 + 0].x, outerDegeneratePositions[i * 4 + 0].y);
-			instanceArray.push_back(attribs);
-			attribs.position = glm::vec2(outerDegeneratePositions[i * 4 + 1].x, outerDegeneratePositions[i * 4 + 1].y);
-			instanceArray.push_back(attribs);
-
-			model = glm::rotate(glm::mat4(1), glm::radians(-90.f), glm::vec3(0.0f, 1.0f, 0.0f));
-			attribs.model = model;
-
-			attribs.position = glm::vec2(outerDegeneratePositions[i * 4 + 2].x, outerDegeneratePositions[i * 4 + 2].y);
-			instanceArray.push_back(attribs);
-			attribs.position = glm::vec2(outerDegeneratePositions[i * 4 + 3].x, outerDegeneratePositions[i * 4 + 3].y);
-			instanceArray.push_back(attribs);
-		}
-		Terrain::drawElementsInstanced(outerDegenerateVAO, instanceArray, outerDegenerateIndiceCount);
-		instanceArray.clear();
-
-		// SMALL SQUARE
-		TerrainVertexAttribs attribs;
-		attribs.level = 0;
-		attribs.model = glm::mat4(1);
-		attribs.position = glm::vec2(smallSquarePosition.x, smallSquarePosition.y);
-		attribs.color = SMALL_SQUARE_COLOR;
-		instanceArray.push_back(attribs);
-		Terrain::drawElementsInstanced(smallSquareVAO, instanceArray, smallSquareIndiceCount);
-
-		if (showBounds) {
-			for (int i = 0; i < CLIPMAP_LEVEL; i++) {
-
-				for (int j = 0; j < 12; j++) {
-
-					AABB_Box aabb = blockAABBs[i * 12 + j];
-					glm::vec3 pos = (aabb.start + aabb.end) * 0.5f;
-					glm::vec3 scale = aabb.end - aabb.start;
-					glm::mat4 model = glm::translate(glm::mat4(1), pos) * glm::scale(glm::mat4(1), scale);
-					glm::mat4 PVM = PV * model;
-					glm::vec3 color = glm::vec3(1, 0.3, 0.5);
-					CoreContext::instance->renderer->drawBoundingBoxVAO(PVM, color);
-				}
-			}
-
-			for (int i = 0; i < 4; i++) {
-
-				AABB_Box aabb = blockAABBs[CLIPMAP_LEVEL * 12 + i];
-				glm::vec3 pos = (aabb.start + aabb.end) * 0.5f;
-				glm::vec3 scale = aabb.end - aabb.start;
-				glm::mat4 model = glm::translate(glm::mat4(1), pos) * glm::scale(glm::mat4(1), scale);
-				glm::mat4 PVM = PV * model;
-				glm::vec3 color = glm::vec3(1, 0.3, 0.5);
-				CoreContext::instance->renderer->drawBoundingBoxVAO(PVM, color);
-			}
-		}
-	}
-
-	/*
-	* Draw nested grids instanced.
-	*/
-	void Terrain::drawElementsInstanced(unsigned int VAO, std::vector<TerrainVertexAttribs>& instanceArray, unsigned int indiceCount) {
-
-		unsigned int instanceBuffer;
-		glGenBuffers(1, &instanceBuffer);
-		glBindBuffer(GL_ARRAY_BUFFER, instanceBuffer);
-		glBufferData(GL_ARRAY_BUFFER, instanceArray.size() * sizeof(TerrainVertexAttribs), &instanceArray[0], GL_STATIC_DRAW);
-
-		glBindVertexArray(VAO);
-
-		glEnableVertexAttribArray(1);
-		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(TerrainVertexAttribs), (void*)0);
-		//glEnableVertexAttribArray(2);
-		//glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(TerrainVertexAttribs), (void*)(sizeof(glm::vec2)));
-		glEnableVertexAttribArray(3);
-		glVertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, sizeof(TerrainVertexAttribs), (void*)(sizeof(glm::vec2)));
-		glEnableVertexAttribArray(4);
-		glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, sizeof(TerrainVertexAttribs), (void*)(sizeof(glm::vec2) + sizeof(float)));
-		glEnableVertexAttribArray(5);
-		glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, sizeof(TerrainVertexAttribs), (void*)(sizeof(glm::vec2) + sizeof(float) + sizeof(glm::vec4)));
-		glEnableVertexAttribArray(6);
-		glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, sizeof(TerrainVertexAttribs), (void*)(sizeof(glm::vec2) + sizeof(float) + sizeof(glm::vec4) * 2));
-		glEnableVertexAttribArray(7);
-		glVertexAttribPointer(7, 4, GL_FLOAT, GL_FALSE, sizeof(TerrainVertexAttribs), (void*)(sizeof(glm::vec2) + sizeof(float) + sizeof(glm::vec4) * 3));
-		glEnableVertexAttribArray(8);
-		glVertexAttribPointer(8, 3, GL_FLOAT, GL_FALSE, sizeof(TerrainVertexAttribs), (void*)(sizeof(glm::vec2) + sizeof(float) + sizeof(glm::vec4) * 4));
-
-		glVertexAttribDivisor(1, 1);
-		glVertexAttribDivisor(2, 1);
-		glVertexAttribDivisor(3, 1);
-		glVertexAttribDivisor(4, 1);
-		glVertexAttribDivisor(5, 1);
-		glVertexAttribDivisor(6, 1);
-		glVertexAttribDivisor(7, 1);
-		glVertexAttribDivisor(8, 1);
-
-		glDrawElementsInstanced(GL_TRIANGLES, static_cast<unsigned int>(indiceCount), GL_UNSIGNED_INT, 0, instanceArray.size());
-
-		glBindVertexArray(0);
-		glDeleteBuffers(1, &instanceBuffer);
-	}
-
-	/*
-	* When camera moves, nested grids positions are also updated in this function.
-	*/
-	void Terrain::calculateBlockPositions(glm::vec3 camPosition) {
-
-		int patchWidth = 2;
-
-		for (int i = 0; i < CLIPMAP_LEVEL; i++) {
-
-			/*
-			*         Z+
-			*         ^
-			*         |  This is our reference for numbers
-			*         |
-			* x+ <-----
-			*/
-
-			// Blocks move periodically according to camera's position.
-			// For example:
-			// Cam pos X       : 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ...
-			// Block at level 0: 0, 0, 2, 2, 4, 4, 6, 6, 8, 8, 10 ...
-			// Block at level 1: 0, 0, 0, 0, 4, 4, 4, 4, 8, 8, 8  ...
-			// Block at level 2: 0, 0, 0, 0, 0, 0, 0, 0, 8, 8, 8  ...
-
-			float requiredCameraDisplacement = patchWidth * (1 << i);
-			float posX = (int)(camPosition.x / requiredCameraDisplacement) * requiredCameraDisplacement;
-			float posZ = (int)(camPosition.z / requiredCameraDisplacement) * requiredCameraDisplacement;
-
-			float patchTranslation = (1 << i) * CLIPMAP_RESOLUTION;
-			float patchOffset = 1 << i;
-
-			// For outer trim rotation. This '2' at the end is constant. Because of binary movement style
-			int rotX = (int)(posX / requiredCameraDisplacement) % 2;
-			int rotZ = (int)(posZ / requiredCameraDisplacement) % 2;
-
-			//// BLOCKS
-
-			/*
-			*  0 11 10  9
-			*  1        8
-			*  2        7
-			*  3  4  5  6
-			*/
-
-			// 0
-			glm::vec2 position(patchTranslation + posX, patchTranslation + posZ);
-			position.x += patchOffset;
-			position.y += patchOffset;
-			blockPositions[i * 12 + 0] = position;
-
-			// 1
-			position.y += patchOffset - patchTranslation;
-			blockPositions[i * 12 + 1] = position;
-			position.y -= patchOffset;
-
-			// 2
-			position.y -= patchTranslation;
-			blockPositions[i * 12 + 2] = position;
-			position.y += patchOffset;
-
-			// 3
-			position.y -= patchTranslation;
-			blockPositions[i * 12 + 3] = position;
-			position.x += patchOffset;
-
-			// 4
-			position.x -= patchTranslation;
-			blockPositions[i * 12 + 4] = position;
-
-			// 5
-			position.x -= patchTranslation + patchOffset;
-			blockPositions[i * 12 + 5] = position;
-			position.x += patchOffset;
-
-			// 6
-			position.x -= patchTranslation;
-			blockPositions[i * 12 + 6] = position;
-			position.y -= patchOffset;
-
-			// 7
-			position.y += patchTranslation;
-			blockPositions[i * 12 + 7] = position;
-
-			// 8
-			position.y += patchTranslation + patchOffset;
-			blockPositions[i * 12 + 8] = position;
-			position.y -= patchOffset;
-
-			// 9
-			position.y += patchTranslation;
-			blockPositions[i * 12 + 9] = position;
-
-			// 10
-			position.x += patchTranslation - patchOffset;
-			blockPositions[i * 12 + 10] = position;
-			position.x += patchOffset;
-
-			// 11
-			position.x += patchTranslation;
-			blockPositions[i * 12 + 11] = position;
-
-			// RING FIX-UP
-
-			/*
-			*    0
-			*    1
-			*/
-
-			// 0
-			position = glm::vec2(+posX, patchTranslation + patchOffset + posZ);
-			ringFixUpPositions[i * 2 + 0] = position;
-
-			// 2
-			position = glm::vec2(+posX, (patchOffset - patchTranslation) * 2 + posZ);
-			ringFixUpPositions[i * 2 + 1] = position;
-
-			// RING FIX-UP HORIZONTAL
-
-			/*
-			*  0   1
-			*/
-
-			// 0
-			position = glm::vec2(+posX + patchTranslation + patchOffset, +posZ);
-			ringFixUpVerticalPositions[i * 2 + 0] = position;
-
-			// 1
-			position = glm::vec2(+posX - patchTranslation * 2 + patchOffset * 2, +posZ);
-			ringFixUpVerticalPositions[i * 2 + 1] = position;
-
-			// INTERIOR TRIM
-
-			position = glm::vec2(patchOffset * 2 * (1 - rotX) + posX, patchOffset * 2 * (1 - rotZ) + posZ);
-			interiorTrimPositions[i] = position;
-
-			if (rotX == 0 && rotZ == 0)
-				rotAmounts[i] = 0.f;
-			if (rotX == 0 && rotZ == 1)
-				rotAmounts[i] = 90.f;
-			if (rotX == 1 && rotZ == 0)
-				rotAmounts[i] = 270.f;
-			if (rotX == 1 && rotZ == 1)
-				rotAmounts[i] = 180.f;
-
-			// OUTER DEGENERATE
-
-			// bottom (0) 
-			position = glm::vec2((patchOffset - patchTranslation) * 2 + posX, (patchOffset - patchTranslation) * 2 + posZ);
-			outerDegeneratePositions[i * 4 + 0] = position;
-
-			// top (1)
-			position = glm::vec2((patchOffset - patchTranslation) * 2 + posX, (patchTranslation) * 2 + posZ);
-			outerDegeneratePositions[i * 4 + 1] = position;
-
-			// right (2)
-			position = glm::vec2((patchOffset - patchTranslation) * 2 + posX, (patchOffset - patchTranslation) * 2 + posZ);
-			outerDegeneratePositions[i * 4 + 2] = position;
-
-			// left (3)
-			position = glm::vec2((patchTranslation) * 2 + posX, (patchOffset - patchTranslation) * 2 + posZ);
-			outerDegeneratePositions[i * 4 + 3] = position;
-		}
-
-		float posX = (int)(camPosition.x / 2) * 2;
-		float posZ = (int)(camPosition.z / 2) * 2;
-		glm::vec2 position(2 + posX, 2 + posZ);
-
-		// 0
-		blockPositions[CLIPMAP_LEVEL * 12 + 0] = position;
-
-		// 1
-		position.y -= CLIPMAP_RESOLUTION + 1;
-		blockPositions[CLIPMAP_LEVEL * 12 + 1] = position;
-
-		// 2
-		position.x -= CLIPMAP_RESOLUTION + 1;
-		blockPositions[CLIPMAP_LEVEL * 12 + 2] = position;
-
-		// 3
-		position.y += CLIPMAP_RESOLUTION + 1;
-		blockPositions[CLIPMAP_LEVEL * 12 + 3] = position;
-
-		//
-		//0
-		position = glm::vec2(0 + posX, 2 + posZ);
-		ringFixUpPositions[CLIPMAP_LEVEL * 2 + 0] = position;
-
-		// 2
-		position = glm::vec2(0 + posX, 1 - CLIPMAP_RESOLUTION + posZ);
-		ringFixUpPositions[CLIPMAP_LEVEL * 2 + 1] = position;
-
-		//
-		//0
-		position = glm::vec2(0 + posX + 2, +posZ);
-		ringFixUpVerticalPositions[CLIPMAP_LEVEL * 2 + 0] = position;
-
-		// 2
-		position = glm::vec2(1 + posX - CLIPMAP_RESOLUTION, +posZ);
-		ringFixUpVerticalPositions[CLIPMAP_LEVEL * 2 + 1] = position;
-
-		//
-		smallSquarePosition = glm::vec2(0 + posX, 0 + posZ);
-	}
-
-	void Terrain::streamTerrain(glm::vec3 newCamPos) {
-
-		for (int level = 0; level < CLIPMAP_LEVEL; level++) {
-
-			glm::ivec2 old_tileIndex = Terrain::getTileIndex(level, cameraPosition);
-			glm::ivec2 old_tileStart = old_tileIndex - MEM_TILE_ONE_SIDE / 2;
-			glm::ivec2 old_border = old_tileStart % MEM_TILE_ONE_SIDE;
-
-			glm::ivec2 new_tileIndex = Terrain::getTileIndex(level, newCamPos);
-			glm::ivec2 new_tileStart = new_tileIndex - MEM_TILE_ONE_SIDE / 2;
-			glm::ivec2 new_border = new_tileStart % MEM_TILE_ONE_SIDE;
-
-			glm::ivec2 tileDelta = new_tileIndex - old_tileIndex;
-
-			if (tileDelta.x == 0 && tileDelta.y == 0)
-				continue;
-
-			if (tileDelta.x >= MEM_TILE_ONE_SIDE || tileDelta.y >= MEM_TILE_ONE_SIDE || tileDelta.x <= -MEM_TILE_ONE_SIDE || tileDelta.y <= -MEM_TILE_ONE_SIDE) {
-
-				unsigned char* heightData = new unsigned char[MEM_TILE_ONE_SIDE * MEM_TILE_ONE_SIDE * TILE_SIZE * TILE_SIZE * 4];
-				Terrain::loadHeightmapAtLevel(level, newCamPos, heightData);
-				Terrain::updateHeightMapTextureArrayPartial(level, glm::ivec2(TILE_SIZE * MEM_TILE_ONE_SIDE, TILE_SIZE * MEM_TILE_ONE_SIDE), glm::ivec2(0, 0), heightData);
-				delete[] heightData;
-				continue;
-			}
-
-			Terrain::streamTerrainHorizontal(old_tileIndex, old_tileStart, old_border, new_tileIndex, new_tileStart, new_border, tileDelta, level);
-			old_tileIndex.x = new_tileIndex.x;
-			old_tileStart.x = new_tileStart.x;
-			old_border.x = new_border.x;
-			tileDelta.x = 0;
-			Terrain::streamTerrainVertical(old_tileIndex, old_tileStart, old_border, new_tileIndex, new_tileStart, new_border, tileDelta, level);
-		}
-	}
-
-	void Terrain::calculateBoundingBoxes(glm::vec3 camPos) {
-
-		for (int level = 0; level < CLIPMAP_LEVEL; level++) {
-
-			glm::ivec2 old_clipmapPos = Terrain::getClipmapPosition(level, cameraPosition);
-			glm::ivec2 new_clipmapPos = Terrain::getClipmapPosition(level, camPos);
-
-			if (old_clipmapPos.x != new_clipmapPos.x || old_clipmapPos.y != new_clipmapPos.y) {
-				for (int i = 0; i < 12; i++)
-					blockAABBs[level * 12 + i] = Terrain::getBoundingBoxOfClipmap(level * 12 + i, level);
-			}
-		}
-
-		glm::ivec2 old_clipmapPos = Terrain::getClipmapPosition(0, cameraPosition);
-		glm::ivec2 new_clipmapPos = Terrain::getClipmapPosition(0, camPos);
-
-		if (old_clipmapPos.x != new_clipmapPos.x || old_clipmapPos.y != new_clipmapPos.y) {
-			for (int i = 0; i < 4; i++)
-				blockAABBs[CLIPMAP_LEVEL * 12 + i] = Terrain::getBoundingBoxOfClipmap(CLIPMAP_LEVEL * 12 + i, 0);
-		}
-	}
-
-	AABB_Box Terrain::getBoundingBoxOfClipmap(int index, int level) {
-
-		glm::ivec2 blockPositionInWorldSpace = blockPositions[index];
-
-		int startPos = clipmapStartIndices[level].x;
-		int endPos = clipmapStartIndices[level].y;
-		int startPosWorldSpace = (startPos * TILE_SIZE) << level;
-
-		int sizeInHeightmap = (endPos - startPos) * TILE_SIZE;
-		int lowResolutionHeightmapTextureSize = sizeInHeightmap >> MIP_STACK_DIVISOR_POWER;
-
-		glm::ivec2 startPosInHeightmapWorldSpace = glm::ivec2(startPosWorldSpace, startPosWorldSpace);
-		glm::ivec2 offsetWorldSpace = blockPositionInWorldSpace - startPosInHeightmapWorldSpace;
-
-		// this is where clipmap position is equivalent in low resolution heightmap
-		glm::ivec2 offsetInLowResolutionHeightmap = (offsetWorldSpace >> level) >> MIP_STACK_DIVISOR_POWER;
-		
-		int blockSizeInLowResolutionHeightmapStack = CLIPMAP_RESOLUTION >> MIP_STACK_DIVISOR_POWER;
-		int blockSizeInWorldSpace = (CLIPMAP_RESOLUTION - 1) << level;
-
-		// size value of clipmap in low resolution heightmap
-		glm::ivec2 sizeInLowResolutionHeightmapStack = glm::ivec2(blockSizeInLowResolutionHeightmapStack, blockSizeInLowResolutionHeightmapStack);
-
-		unsigned char min = 255;
-		unsigned char max = 0;
-
-		int startX = offsetInLowResolutionHeightmap.x;
-		int endX = startX + sizeInLowResolutionHeightmapStack.x;
-		int startZ = offsetInLowResolutionHeightmap.y;
-		int endZ = startZ + sizeInLowResolutionHeightmapStack.y;
-
-		for (int i = startZ; i < endZ; i++) {
-			for (int j = startX; j < endX; j++) {
-				
-				int index = i * lowResolutionHeightmapTextureSize + j;
-				if (lowResolustionHeightmapStack[level][index] < min)
-					min = lowResolustionHeightmapStack[level][index];
-
-				if (lowResolustionHeightmapStack[level][index] > max)
-					max = lowResolustionHeightmapStack[level][index];
-			}
-		}
-
-		float margin = 1.f;
-		glm::vec4 corner0(blockPositionInWorldSpace.x - margin, min * (MAX_HEIGHT / 255.f) - margin, blockPositionInWorldSpace.y - margin, 1);
-		glm::vec4 corner1(blockPositionInWorldSpace.x + blockSizeInWorldSpace + margin, max * (MAX_HEIGHT / 255.f) + margin, blockPositionInWorldSpace.y + blockSizeInWorldSpace + margin, 1);
-
-		AABB_Box boundingBox;
-		boundingBox.start = corner0;
-		boundingBox.end = corner1;
-		return boundingBox;
-	}
-
-	// ref: https://arm-software.github.io/opengl-es-sdk-for-android/terrain.html
-	bool Terrain::intersectsAABB(glm::vec4& start, glm::vec4& end) {
-		// If all corners of an axis-aligned bounding box are on the "wrong side" (negative distance)
-		// of at least one of the frustum planes, we can safely cull the mesh.
-		glm::vec4 corners[8];
-
-		corners[0] = glm::vec4(start.x, start.y, start.z, 1);
-		corners[1] = glm::vec4(start.x, start.y, end.z, 1);
-		corners[2] = glm::vec4(start.x, end.y, start.z, 1);
-		corners[3] = glm::vec4(start.x, end.y, end.z, 1);
-		corners[4] = glm::vec4(end.x, start.y, start.z, 1);
-		corners[5] = glm::vec4(end.x, start.y, end.z, 1);
-		corners[6] = glm::vec4(end.x, end.y, start.z, 1);
-		corners[7] = glm::vec4(end.x, end.y, end.z, 1);
-
-		//for (unsigned int c = 0; c < 8; c++)
-		//{
-		//    // Require 4-dimensional coordinates for plane equations.
-		//    corners[c] = glm::vec4(aabb[c], 1.0f);
-		//}
-		for (unsigned int p = 0; p < 6; p++)
-		{
-			bool inside_plane = false;
-			for (unsigned int c = 0; c < 8; c++)
-			{
-				// If dot product > 0, we're "inside" the frustum plane,
-				// otherwise, outside.
-				glm::vec4 plane = CoreContext::instance->scene->cameraInfo.planes[p];
-				if (glm::dot(corners[c], plane) > 0.0f)
-				{
-					inside_plane = true;
-					break;
-				}
-			}
-			if (!inside_plane)
-				return false;
-		}
-		return true;
-	}
-
-	/*
-	* Controls any data update when camera movement is in x direction
-	*/
-	void Terrain::streamTerrainHorizontal(glm::ivec2 old_tileIndex, glm::ivec2 old_tileStart, glm::ivec2 old_border, glm::ivec2 new_tileIndex, glm::ivec2 new_tileStart, glm::ivec2 new_border, glm::ivec2 tileDelta, int level) {
-
-		if (tileDelta.x > 0) {
-
-			old_tileStart.x += MEM_TILE_ONE_SIDE;
-
-			unsigned char* heightData = new unsigned char[MEM_TILE_ONE_SIDE * TILE_SIZE * TILE_SIZE * TERRAIN_STACK_NUM_CHANNELS];
-
-			for (int x = 0; x < tileDelta.x; x++) {
-
-				int startY = old_tileStart.y;
-
-				for (int z = 0; z < MEM_TILE_ONE_SIDE; z++) {
-
-					Terrain::writeHeightDataToGPUBuffer(glm::ivec2(0, old_border.y), glm::ivec2(old_tileStart.x, startY), TILE_SIZE, heightData, level);
-
-					old_border.y++;
-					old_border.y %= MEM_TILE_ONE_SIDE;
-					startY++;
-				}
-
-				Terrain::updateHeightMapTextureArrayPartial(level, glm::ivec2(TILE_SIZE, TILE_SIZE * MEM_TILE_ONE_SIDE), glm::ivec2(old_border.x * TILE_SIZE, 0), heightData);
-
-				old_border.x++;
-				old_border.x %= MEM_TILE_ONE_SIDE;
-				old_tileStart.x++;
-			}
-
-			delete[] heightData;
-
-			//// DEBUG
-			//std::vector<unsigned char> out(TILE_SIZE * MEM_TILE_ONE_SIDE * TILE_SIZE * MEM_TILE_ONE_SIDE * 2);
-			//for (int i = 0; i < TILE_SIZE * MEM_TILE_ONE_SIDE * TILE_SIZE * MEM_TILE_ONE_SIDE * 2; i++)
-			//	out[i] = heights[level][i];
-
-			//unsigned int width = TILE_SIZE * MEM_TILE_ONE_SIDE;
-			//unsigned int height = TILE_SIZE * MEM_TILE_ONE_SIDE;
-			//std::string imagePath = "heights" + std::to_string(level) + ".png";
-			//TextureFile::encodeTextureFile(width, height, out, &imagePath[0]);
-		}
-		else if (tileDelta.x < 0) {
-
-			old_tileStart.x -= 1;
-
-			unsigned char* heightData = new unsigned char[MEM_TILE_ONE_SIDE * TILE_SIZE * TILE_SIZE * TERRAIN_STACK_NUM_CHANNELS];
-
-			for (int x = tileDelta.x; x < 0; x++) {
-
-				old_border.x--;
-				old_border.x += 4;
-				old_border.x %= MEM_TILE_ONE_SIDE;
-
-				int startY = old_tileStart.y;
-
-				for (int z = 0; z < MEM_TILE_ONE_SIDE; z++) {
-
-					Terrain::writeHeightDataToGPUBuffer(glm::ivec2(0, old_border.y), glm::ivec2(old_tileStart.x, startY), TILE_SIZE, heightData, level);
-
-					old_border.y++;
-					old_border.y %= MEM_TILE_ONE_SIDE;
-					startY++;
-				}
-
-				Terrain::updateHeightMapTextureArrayPartial(level, glm::ivec2(TILE_SIZE, TILE_SIZE * MEM_TILE_ONE_SIDE), glm::ivec2(old_border.x * TILE_SIZE, 0), heightData);
-
-				old_tileStart.x--;
-			}
-
-			delete[] heightData;
-		}
-	}
-
-	/*
-	* Controls any data update when camera movement is in z direction
-	*/
-	void Terrain::streamTerrainVertical(glm::ivec2 old_tileIndex, glm::ivec2 old_tileStart, glm::ivec2 old_border, glm::ivec2 new_tileIndex, glm::ivec2 new_tileStart, glm::ivec2 new_border, glm::ivec2 tileDelta, int level) {
-
-		if (tileDelta.y > 0) {
-
-			old_tileStart.y += MEM_TILE_ONE_SIDE;
-
-			unsigned char* heightData = new unsigned char[MEM_TILE_ONE_SIDE * TILE_SIZE * TILE_SIZE * TERRAIN_STACK_NUM_CHANNELS];
-
-			for (int z = 0; z < tileDelta.y; z++) {
-
-				int startX = old_tileStart.x;
-
-				for (int x = 0; x < MEM_TILE_ONE_SIDE; x++) {
-
-					Terrain::writeHeightDataToGPUBuffer(glm::ivec2(old_border.x, 0), glm::ivec2(startX, old_tileStart.y), MEM_TILE_ONE_SIDE * TILE_SIZE, heightData, level);
-					old_border.x++;
-					old_border.x %= MEM_TILE_ONE_SIDE;
-					startX++;
-				}
-
-				Terrain::updateHeightMapTextureArrayPartial(level, glm::ivec2(TILE_SIZE * MEM_TILE_ONE_SIDE, TILE_SIZE), glm::ivec2(0, old_border.y * TILE_SIZE), heightData);
-
-				old_border.y++;
-				old_border.y %= MEM_TILE_ONE_SIDE;
-				old_tileStart.y++;
-			}
-
-			delete[] heightData;
-		}
-		else if (tileDelta.y < 0) {
-
-			old_tileStart.y -= 1;
-
-			unsigned char* heightData = new unsigned char[MEM_TILE_ONE_SIDE * TILE_SIZE * TILE_SIZE * TERRAIN_STACK_NUM_CHANNELS];
-
-			for (int z = tileDelta.y; z < 0; z++) {
-
-				old_border.y--;
-				old_border.y += 4;
-				old_border.y %= MEM_TILE_ONE_SIDE;
-
-				int startX = old_tileStart.x;
-
-				for (int x = 0; x < MEM_TILE_ONE_SIDE; x++) {
-
-					Terrain::writeHeightDataToGPUBuffer(glm::ivec2(old_border.x, 0), glm::ivec2(startX, old_tileStart.y), MEM_TILE_ONE_SIDE * TILE_SIZE, heightData, level);
-
-					old_border.x++;
-					old_border.x %= MEM_TILE_ONE_SIDE;
-					startX++;
-				}
-
-				Terrain::updateHeightMapTextureArrayPartial(level, glm::ivec2(TILE_SIZE * MEM_TILE_ONE_SIDE, TILE_SIZE), glm::ivec2(0, old_border.y * TILE_SIZE), heightData);
-
-				old_tileStart.y--;
-			}
-
-			delete[] heightData;
-		}
-	}
-
-	/*
-	* Partially update heightmap texture in gpu memory
-	*/
-	void Terrain::updateHeightMapTextureArrayPartial(int level, glm::ivec2 size, glm::ivec2 position, unsigned char* heights) {
-
-		glBindTexture(GL_TEXTURE_2D_ARRAY, elevationMapTexture);
-		glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, position.x, position.y, level, size.x, size.y, 1, GL_RG, GL_UNSIGNED_BYTE, &heights[0]);
-		glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
-	}
-
-	void Terrain::deleteHeightmapArray(unsigned char** heightmapArray) {
-
-		for (int i = 0; i < CLIPMAP_LEVEL; i++)
-			delete[] heightmapArray[i];
-
-		delete[] heightmapArray;
-	}
-
-	/*
-	* The first time data sent to the gpu when map is loaded this function is called.
-	* Or if you jump to far point of the map, all data is updated instead of toroidally.
-	*/
-	void Terrain::createElevationMapTextureArray(unsigned char** heightmapArray) {
-
-		int size = TILE_SIZE * MEM_TILE_ONE_SIDE;
-
-		if (elevationMapTexture)
-			glDeleteTextures(1, &elevationMapTexture);
-
-		glGenTextures(1, &elevationMapTexture);
-		glBindTexture(GL_TEXTURE_2D_ARRAY, elevationMapTexture);
-
-		glTexStorage3D(GL_TEXTURE_2D_ARRAY, 1, GL_RG8, size, size, CLIPMAP_LEVEL);
-
-		for (int i = 0; i < CLIPMAP_LEVEL; i++)
-			glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, i, size, size, 1, GL_RG, GL_UNSIGNED_BYTE, &heightmapArray[i][0]);
-
-		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	}
-
-	/*
-	* Terrain textures. We procedurally merge them in the fragment shader.
-	*/
-	void Terrain::loadTextures() {
-
-		std::map<std::string, Texture*>& textures = CoreContext::instance->fileSystem->textures;
-
-		albedo0 = textures.at("soil_a")->textureId;
-		albedo1 = textures.at("mulch_a")->textureId;
-		albedo2 = textures.at("granite_a")->textureId;
-		albedo3 = textures.at("soil_rock_a")->textureId;
-		albedo5 = textures.at("sand_a")->textureId;
-		albedo6 = textures.at("lichened_rock_a")->textureId;
-
-		normal0 = textures.at("soil_n")->textureId;
-		normal1 = textures.at("mulch_n")->textureId;
-		normal2 = textures.at("granite_n")->textureId;
-		normal3 = textures.at("soil_rock_n")->textureId;
-		normal4 = textures.at("snow_fresh_n")->textureId;
-		normal5 = textures.at("sand_n")->textureId;
-		normal6 = textures.at("lichened_rock_n")->textureId;
-		normal7 = textures.at("s1n")->textureId;
-
-		macroTexture = textures.at("gold_a")->textureId;
-		noiseTexture = textures.at("noiseTexture")->textureId;
-	}
-
-	/*
-	* We toroidally update the height values of the texture in GPU.
-	* In this case we only update small chunks of the memory instead of updating all data.
-	*/
-	void Terrain::writeHeightDataToGPUBuffer(glm::ivec2 index, glm::ivec2 tileStart, int texWidth, unsigned char* heightMap, int level) {
-
-		int startX = index.x * TILE_SIZE;
-		int startZ = index.y * TILE_SIZE;
-
-		int coord_x = (tileStart.x - clipmapStartIndices[level].x) * TILE_SIZE;
-		int coord_z = (tileStart.y - clipmapStartIndices[level].x) * TILE_SIZE;
-
-		int stackSize = (clipmapStartIndices[level].y - clipmapStartIndices[level].x) * TILE_SIZE;
-
-		for (int i = 0; i < TILE_SIZE; i++) {
-
-			for (int j = 0; j < TILE_SIZE; j++) {
-
-				int indexInChunk = ((i + coord_z) * stackSize + coord_x + j) * TERRAIN_STACK_NUM_CHANNELS;
-				int indexInHeightmap = ((i + startZ) * texWidth + j + startX) * TERRAIN_STACK_NUM_CHANNELS;
-		
-				// Data that will be sent to GPU
-				heightMap[indexInHeightmap] = heightmapStack[level][indexInChunk];
-				heightMap[indexInHeightmap + 1] = heightmapStack[level][indexInChunk + 1];
-			}
-		}
-	}
-
+	 
 	/*
 	* Creates all the vao for the meshes of the terrain
 	*/
 	void Terrain::generateTerrainClipmapsVertexArrays() {
+
+		std::vector<unsigned int> blockIndices;
+		std::vector<unsigned int> ringFixUpVerticalIndices;
+		std::vector<unsigned int> ringFixUpHorizontalIndices;
+		std::vector<unsigned int> smallSquareIndices;
+		std::vector<unsigned int> outerDegenerateIndices;
+		std::vector<unsigned int> interiorTrimIndices;
 
 		std::vector<glm::vec2> blockVerts;
 		std::vector<glm::vec2> ringFixUpVerticalVerts;
@@ -1175,7 +152,6 @@ namespace Core {
 				blockVerts.push_back(glm::vec2(j, i));
 
 		for (int i = 0; i < CLIPMAP_RESOLUTION - 1; i++) {
-
 			for (int j = 0; j < CLIPMAP_RESOLUTION - 1; j++) {
 
 				blockIndices.push_back(j + i * CLIPMAP_RESOLUTION);
@@ -1194,7 +170,6 @@ namespace Core {
 				smallSquareVerts.push_back(glm::vec2(j, i));
 
 		for (int i = 0; i < 3 - 1; i++) {
-
 			for (int j = 0; j < 3 - 1; j++) {
 
 				smallSquareIndices.push_back(j + i * 3);
@@ -1213,7 +188,6 @@ namespace Core {
 				ringFixUpVerticalVerts.push_back(glm::vec2(j, i));
 
 		for (int i = 0; i < CLIPMAP_RESOLUTION - 1; i++) {
-
 			for (int j = 0; j < 3 - 1; j++) {
 
 				ringFixUpVerticalIndices.push_back(j + i * 3);
@@ -1232,7 +206,6 @@ namespace Core {
 				ringFixUpHorizontalVerts.push_back(glm::vec2(j, i));
 
 		for (int i = 0; i < 3 - 1; i++) {
-
 			for (int j = 0; j < CLIPMAP_RESOLUTION - 1; j++) {
 
 				ringFixUpHorizontalIndices.push_back(i * CLIPMAP_RESOLUTION + j);
@@ -1246,10 +219,20 @@ namespace Core {
 		}
 
 		// outer degenerate
-		for (int i = 0; i <= CLIPMAP_RESOLUTION * 4 - 2; i++)
+		for (int i = 0; i < CLIPMAP_RESOLUTION * 4 - 2; i++)
 			outerDegenerateVerts.push_back(glm::vec2(i, 0));
 
-		for (int i = 0; i < CLIPMAP_RESOLUTION * 2 - 1; i++) {
+		for (int i = 0; i < CLIPMAP_RESOLUTION * 4 - 2; i++)
+			outerDegenerateVerts.push_back(glm::vec2(CLIPMAP_RESOLUTION * 4 - 2, i));
+
+		for (int i = 0; i < CLIPMAP_RESOLUTION * 4 - 2; i++)
+			outerDegenerateVerts.push_back(glm::vec2(CLIPMAP_RESOLUTION * 4 - 2 - i, CLIPMAP_RESOLUTION * 4 - 2));
+
+		for (int i = 0; i < CLIPMAP_RESOLUTION * 4 - 2; i++)
+			outerDegenerateVerts.push_back(glm::vec2(0, CLIPMAP_RESOLUTION * 4 - 2 - i));
+
+		int maxIndice = (CLIPMAP_RESOLUTION * 2 - 1) * 4 - 1;
+		for (int i = 0; i < maxIndice; i++) {
 			outerDegenerateIndices.push_back(i * 2);
 			outerDegenerateIndices.push_back(i * 2 + 2);
 			outerDegenerateIndices.push_back(i * 2 + 1);
@@ -1257,6 +240,16 @@ namespace Core {
 			outerDegenerateIndices.push_back(i * 2);
 			outerDegenerateIndices.push_back(i * 2 + 1);
 			outerDegenerateIndices.push_back(i * 2 + 2);
+		}
+
+		{
+			outerDegenerateIndices.push_back(maxIndice * 2);
+			outerDegenerateIndices.push_back(0);
+			outerDegenerateIndices.push_back(maxIndice * 2 + 1);
+
+			outerDegenerateIndices.push_back(0);
+			outerDegenerateIndices.push_back(maxIndice * 2);
+			outerDegenerateIndices.push_back(maxIndice * 2 + 1);
 		}
 
 		// interior trim
@@ -1312,6 +305,13 @@ namespace Core {
 			interiorTrimIndices.push_back(i + size * 3 + 2);
 			interiorTrimIndices.push_back(i + size * 2 + 3);
 		}
+
+		blockIndiceCount = blockIndices.size();
+		ringFixUpVerticalIndiceCount = ringFixUpVerticalIndices.size();
+		ringFixUpHorizontalIndiceCount = ringFixUpHorizontalIndices.size();
+		smallSquareIndiceCount = smallSquareIndices.size();
+		interiorTrimIndiceCount = interiorTrimIndices.size();
+		outerDegenerateIndiceCount = outerDegenerateIndices.size();
 
 		// Block
 		glGenVertexArrays(1, &blockVAO);
@@ -1412,21 +412,56 @@ namespace Core {
 		glBindVertexArray(0);
 	}
 
-	glm::ivec2 Terrain::getClipmapPosition(int level, glm::vec3& camPos) {
+	/*
+	* The first time data sent to the gpu when map is loaded this function is called.
+	* Or if you jump to far point of the map, all data is updated instead of toroidally.
+	*/
+	void Terrain::createElevationMapTextureArray(unsigned char** heightmapArray) {
 
-		int patchWidth = 2;
-		float patchOffset = 1 << level;
-		float requiredCameraDisplacement = patchWidth * patchOffset;
-		float posX = (int)(camPos.x / requiredCameraDisplacement) * requiredCameraDisplacement;
-		float posZ = (int)(camPos.z / requiredCameraDisplacement) * requiredCameraDisplacement;
-		return glm::ivec2(posX + patchOffset, posZ + patchOffset);
+		int size = TILE_SIZE * MEM_TILE_ONE_SIDE;
+
+		if (elevationMapTextureArray)
+			glDeleteTextures(1, &elevationMapTextureArray);
+
+		glGenTextures(1, &elevationMapTextureArray);
+		glBindTexture(GL_TEXTURE_2D_ARRAY, elevationMapTextureArray);
+
+		glTexStorage3D(GL_TEXTURE_2D_ARRAY, 1, GL_RG8, size, size, CLIPMAP_LEVEL);
+
+		for (int i = 0; i < CLIPMAP_LEVEL; i++)
+			glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, i, size, size, 1, GL_RG, GL_UNSIGNED_BYTE, &heightmapArray[i][0]);
+
+		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_REPEAT);
 	}
 
-	glm::ivec2 Terrain::getTileIndex(int level, glm::vec3& camPos) {
+	/*
+	* Terrain textures. We procedurally merge them in the fragment shader.
+	*/
+	void Terrain::loadTextures() {
 
-		int tileSizeInReal = TILE_SIZE * (1 << level);
-		glm::ivec2 clipmapPos = Terrain::getClipmapPosition(level, camPos);
-		return glm::ivec2(clipmapPos.x / tileSizeInReal, clipmapPos.y / tileSizeInReal);
+		std::map<std::string, Texture*>& textures = CoreContext::instance->fileSystem->textures;
+
+		albedo0 = textures.at("soilmulch_a")->textureId;
+		albedo1 = textures.at("groundforest_a")->textureId;
+		albedo2 = textures.at("cliffgranite_a")->textureId;
+		albedo3 = textures.at("groundsandy_a")->textureId;
+		albedo5 = textures.at("sandbeach_a")->textureId;
+		albedo6 = textures.at("lichenedrock_a")->textureId;
+
+		normal0 = textures.at("soilmulch_n")->textureId;
+		normal1 = textures.at("groundforest_n")->textureId;
+		normal2 = textures.at("cliffgranite_n")->textureId;
+		normal3 = textures.at("groundsandy_n")->textureId;
+		normal4 = textures.at("snowfresh_n")->textureId;
+		normal5 = textures.at("sandbeach_n")->textureId;
+		normal6 = textures.at("lichenedrock_n")->textureId;
+		normal7 = textures.at("snowpure_n")->textureId;
+
+		macroTexture = textures.at("gold_a")->textureId;
+		noiseTexture = textures.at("noiseTexture")->textureId;
 	}
 
 	/*
@@ -1449,7 +484,6 @@ namespace Core {
 		int start = size * 2;
 
 		for (int i = 0; i < size; i++) {
-
 			for (int j = 0; j < size; j++) {
 
 				int indexInRemappedHeightmap = ((i + start) * (size * 4) + (j + start)) * TERRAIN_STACK_NUM_CHANNELS;
@@ -1470,7 +504,6 @@ namespace Core {
 		mipmaps[0] = new unsigned char[size * size * TERRAIN_STACK_NUM_CHANNELS];
 
 		for (int i = 0; i < size; i++) {
-
 			for (int j = 0; j < size; j++) {
 
 				int indexInImportedHeightmap = (i * size + j) * TERRAIN_STACK_NUM_CHANNELS;
@@ -1495,69 +528,7 @@ namespace Core {
 				}
 			}
 		}
-
 		return mipmaps;
-	}
-
-	/*
-	* Creates heightmap stack that is used by gpu. Rather than streaming from disk, we started to stream from memory.
-	* Takes input from resized image.
-	*/
-	void Terrain::createLowResolutionHeightmapStack() {
-
-		lowResolustionHeightmapStack = new unsigned char* [CLIPMAP_LEVEL];
-
-		for (int level = 0; level < CLIPMAP_LEVEL; level++) {
-
-			int sizeInHeightmap = ((clipmapStartIndices[level].y - clipmapStartIndices[level].x) * TILE_SIZE);
-			int sizeInLowResolutionHeightmap = sizeInHeightmap >> MIP_STACK_DIVISOR_POWER;
-			lowResolustionHeightmapStack[level] = new unsigned char[sizeInLowResolutionHeightmap * sizeInLowResolutionHeightmap];
-
-			unsigned char* first = new unsigned char[sizeInHeightmap * sizeInHeightmap];
-
-			// One channel is reduced. Is this gonna be a problem ?
-			for (int i = 0; i < sizeInHeightmap; i++)
-				for (int j = 0; j < sizeInHeightmap; j++) 
-					first[i * sizeInHeightmap + j] = heightmapStack[level][(i * sizeInHeightmap + j) * 2];
-
-			int sizeIterator = sizeInHeightmap;
-			for (int iter = 0; iter < MIP_STACK_DIVISOR_POWER; iter++) {
-
-				sizeIterator >>= 1;
-				unsigned char* second = new unsigned char[sizeIterator * sizeIterator];
-
-				for (int i = 0; i < sizeIterator; i++) {
-					for (int j = 0; j < sizeIterator; j++) {
-						// c0 c1
-						// c2 c3
-						int c0 = first[(i*2 * sizeIterator*2 + j*2)];
-						int c1 = first[(i*2 * sizeIterator*2 + j*2 + 1)];
-						int c2 = first[((i*2 + 1) * sizeIterator*2 + j*2)];
-						int c3 = first[((i*2 + 1) * sizeIterator*2 + j*2 + 1)];
-
-						second[i * sizeIterator + j] = (c0 + c1 + c2 + c3) * 0.25f;
-					}
-				}
-				delete [] first;
-				first = second;
-			}
-
-			for (int i = 0; i < sizeIterator; i++)
-				for (int j = 0; j < sizeIterator; j++)
-					lowResolustionHeightmapStack[level][i * sizeIterator + j] = first[i * sizeIterator + j];
-
-			delete [] first;
-
-			//// DEBUG (SUCCESFUL)
-			//std::vector<unsigned char> in(sizeIterator * sizeIterator);
-			//for (int i = 0; i < sizeIterator * sizeIterator; i++)
-			//	in[i] = lowResolustionHeightmapStack[level][i];
-
-			//unsigned int width = sizeIterator;
-			//unsigned int height = sizeIterator;
-			//std::string imagePath = "lowresheightmapStack" + std::to_string(level) + ".png";
-			//lodepng::encode(imagePath, in, sizeIterator, sizeIterator, LodePNGColorType::LCT_GREY, 8);
-		}
 	}
 
 	/*
@@ -1567,7 +538,7 @@ namespace Core {
 	void Terrain::createHeightmapStack(unsigned char** heightMapList, int width) {
 
 		heightmapStack = new unsigned char* [CLIPMAP_LEVEL];
-		clipmapStartIndices = new glm::ivec2[CLIPMAP_LEVEL];
+
 		for (int i = 0; i < CLIPMAP_LEVEL; i++)
 			clipmapStartIndices[i] = glm::ivec2(0, 0);
 
@@ -1597,16 +568,855 @@ namespace Core {
 				}
 			}
 			res /= 2;
-
-			//// DEBUG (SUCCESFUL)
-			//std::vector<unsigned char> in(size * size * 2);
-			//for (int i = 0; i < size * size * 2; i++)
-			//	in[i] = heightmapStack[level][i];
-
-			//unsigned int width = size;
-			//unsigned int height = size;
-			//std::string imagePath = "heightmapStack" + std::to_string(level) + ".png";
-			//lodepng::encode(imagePath, in, width, height, LodePNGColorType::LCT_GREY, 16);
 		}
+	}
+
+	/*
+	* Creates low resolution heightmap stack that will be used for frustum culling.
+	* We do not need to know precise volume of terrain blocks for that purpose so that heightmap stack can be in low resolution.
+	* In this case memory read will be lesser which will be good for runtime performance.
+	*/
+	void Terrain::createLowResolutionHeightmapStack() {
+
+		lowResolustionHeightmapStack = new unsigned char* [CLIPMAP_LEVEL];
+
+		for (int level = 0; level < CLIPMAP_LEVEL; level++) {
+
+			int sizeInHeightmap = ((clipmapStartIndices[level].y - clipmapStartIndices[level].x) * TILE_SIZE);
+			int sizeInLowResolutionHeightmap = sizeInHeightmap >> MIP_STACK_DIVISOR_POWER;
+			lowResolustionHeightmapStack[level] = new unsigned char[sizeInLowResolutionHeightmap * sizeInLowResolutionHeightmap];
+
+			unsigned char* first = new unsigned char[sizeInHeightmap * sizeInHeightmap];
+
+			for (int i = 0; i < sizeInHeightmap; i++)
+				for (int j = 0; j < sizeInHeightmap; j++)
+					first[i * sizeInHeightmap + j] = heightmapStack[level][(i * sizeInHeightmap + j) * 2];
+
+			int sizeIterator = sizeInHeightmap;
+			for (int iter = 0; iter < MIP_STACK_DIVISOR_POWER; iter++) {
+
+				sizeIterator >>= 1;
+				unsigned char* second = new unsigned char[sizeIterator * sizeIterator];
+
+				for (int i = 0; i < sizeIterator; i++) {
+					for (int j = 0; j < sizeIterator; j++) {
+						// c0 c1
+						// c2 c3
+						int c0 = first[(i * 2 * sizeIterator * 2 + j * 2)];
+						int c1 = first[(i * 2 * sizeIterator * 2 + j * 2 + 1)];
+						int c2 = first[((i * 2 + 1) * sizeIterator * 2 + j * 2)];
+						int c3 = first[((i * 2 + 1) * sizeIterator * 2 + j * 2 + 1)];
+
+						second[i * sizeIterator + j] = (c0 + c1 + c2 + c3) * 0.25f;
+					}
+				}
+				delete[] first;
+				first = second;
+			}
+
+			for (int i = 0; i < sizeIterator; i++)
+				for (int j = 0; j < sizeIterator; j++)
+					lowResolustionHeightmapStack[level][i * sizeIterator + j] = first[i * sizeIterator + j];
+
+			delete[] first;
+		}
+	}
+
+	/*
+	* Any updates because of the camera movement. Nested grids positions, textures updates...
+	*/
+	void Terrain::update(float dt) {
+
+		glm::vec3 camPosition = glm::clamp(CoreContext::instance->scene->cameraInfo.camPos, glm::vec3(MAP_SIZE * 2 + 1, 0, MAP_SIZE * 2 + 1), glm::vec3(MAP_SIZE * 3 - 1, 0, MAP_SIZE * 3 - 1));
+		Terrain::calculateBlockPositions(camPosition);
+		Terrain::calculateBoundingBoxes(camPosition);
+		Terrain::streamTerrain(camPosition);
+		cameraPosition = camPosition;
+	}
+
+	/*
+	* Draw terrain
+	*/
+	void Terrain::onDraw() {
+
+		glm::vec3 camPos = CoreContext::instance->scene->cameraInfo.camPos;
+		glm::mat4& PV = CoreContext::instance->scene->cameraInfo.VP;
+		Cubemap* cubemap = CoreContext::instance->scene->cubemap;
+
+		glUseProgram(terrainProgramID);
+		glUniformMatrix4fv(glGetUniformLocation(terrainProgramID, "PV"), 1, 0, &PV[0][0]);
+		glUniform3fv(glGetUniformLocation(terrainProgramID, "camPos"), 1, &camPos[0]);
+		glUniform1f(glGetUniformLocation(terrainProgramID, "texSize"), (float)TILE_SIZE * MEM_TILE_ONE_SIDE);
+
+		// Terrain Material Parameters
+		glUniform3f(glGetUniformLocation(terrainProgramID, "lightDirection"), lightDir.x, lightDir.y, lightDir.z);
+		glUniform1f(glGetUniformLocation(terrainProgramID, "lightPow"), lightPow);
+
+		glUniform1f(glGetUniformLocation(terrainProgramID, "ambientAmount"), ambientAmount);
+		glUniform1f(glGetUniformLocation(terrainProgramID, "specularPower"), specularPower);
+		glUniform1f(glGetUniformLocation(terrainProgramID, "specularAmount"), specularAmount);
+					
+		glUniform1f(glGetUniformLocation(terrainProgramID, "blendDistance"), blendDistance);
+		glUniform1f(glGetUniformLocation(terrainProgramID, "blendAmount"), blendAmount);
+					
+		glUniform1f(glGetUniformLocation(terrainProgramID, "scale_color0_dist0"), scale_color0_dist0);
+		glUniform1f(glGetUniformLocation(terrainProgramID, "scale_color0_dist1"), scale_color0_dist1);
+					
+		glUniform1f(glGetUniformLocation(terrainProgramID, "scale_color1_dist0"), scale_color1_dist0);
+		glUniform1f(glGetUniformLocation(terrainProgramID, "scale_color1_dist1"), scale_color1_dist1);
+					
+		glUniform1f(glGetUniformLocation(terrainProgramID, "scale_color2_dist0"), scale_color2_dist0);
+		glUniform1f(glGetUniformLocation(terrainProgramID, "scale_color2_dist1"), scale_color2_dist1);
+					
+		glUniform1f(glGetUniformLocation(terrainProgramID, "scale_color3_dist0"), scale_color3_dist0);
+		glUniform1f(glGetUniformLocation(terrainProgramID, "scale_color3_dist1"), scale_color3_dist1);
+					
+		glUniform1f(glGetUniformLocation(terrainProgramID, "scale_color4_dist0"), scale_color4_dist0);
+		glUniform1f(glGetUniformLocation(terrainProgramID, "scale_color4_dist1"), scale_color4_dist1);
+					
+		glUniform1f(glGetUniformLocation(terrainProgramID, "scale_color5_dist0"), scale_color5_dist0);
+		glUniform1f(glGetUniformLocation(terrainProgramID, "scale_color5_dist1"), scale_color5_dist1);
+					
+		glUniform1f(glGetUniformLocation(terrainProgramID, "scale_color6_dist0"), scale_color6_dist0);
+		glUniform1f(glGetUniformLocation(terrainProgramID, "scale_color6_dist1"), scale_color6_dist1);
+					
+		glUniform1f(glGetUniformLocation(terrainProgramID, "scale_color7_dist0"), scale_color7_dist0);
+		glUniform1f(glGetUniformLocation(terrainProgramID, "scale_color7_dist1"), scale_color7_dist1);
+
+		glUniform1f(glGetUniformLocation(terrainProgramID, "macroScale_0"), macroScale_0);
+		glUniform1f(glGetUniformLocation(terrainProgramID, "macroScale_1"), macroScale_1);
+		glUniform1f(glGetUniformLocation(terrainProgramID, "macroScale_2"), macroScale_2);
+		glUniform1f(glGetUniformLocation(terrainProgramID, "macroAmount"), macroAmount);
+		glUniform1f(glGetUniformLocation(terrainProgramID, "macroPower"), macroPower);
+		glUniform1f(glGetUniformLocation(terrainProgramID, "macroOpacity"), macroOpacity);
+					
+		glUniform1f(glGetUniformLocation(terrainProgramID, "overlayBlendScale0"), overlayBlendScale0);
+		glUniform1f(glGetUniformLocation(terrainProgramID, "overlayBlendAmount0"), overlayBlendAmount0);
+		glUniform1f(glGetUniformLocation(terrainProgramID, "overlayBlendPower0"), overlayBlendPower0);
+		glUniform1f(glGetUniformLocation(terrainProgramID, "overlayBlendOpacity0"), overlayBlendOpacity0);
+					
+		glUniform1f(glGetUniformLocation(terrainProgramID, "overlayBlendScale1"), overlayBlendScale1);
+		glUniform1f(glGetUniformLocation(terrainProgramID, "overlayBlendAmount1"), overlayBlendAmount1);
+		glUniform1f(glGetUniformLocation(terrainProgramID, "overlayBlendPower1"), overlayBlendPower1);
+		glUniform1f(glGetUniformLocation(terrainProgramID, "overlayBlendOpacity1"), overlayBlendOpacity1);
+
+		glUniform1f(glGetUniformLocation(terrainProgramID, "overlayBlendScale2"), overlayBlendScale2);
+		glUniform1f(glGetUniformLocation(terrainProgramID, "overlayBlendAmount2"), overlayBlendAmount2);
+		glUniform1f(glGetUniformLocation(terrainProgramID, "overlayBlendPower2"), overlayBlendPower2);
+		glUniform1f(glGetUniformLocation(terrainProgramID, "overlayBlendOpacity2"), overlayBlendOpacity2);
+
+		glUniform3fv(glGetUniformLocation(terrainProgramID, "color0"), 1, &color0[0]);
+		glUniform3fv(glGetUniformLocation(terrainProgramID, "color1"), 1, &color1[0]);
+					
+		glUniform1f(glGetUniformLocation(terrainProgramID, "slopeSharpness0"), slopeSharpness0);
+		glUniform1f(glGetUniformLocation(terrainProgramID, "slopeSharpness1"), slopeSharpness1);
+					
+		glUniform1f(glGetUniformLocation(terrainProgramID, "slopeBias0"), slopeBias0);
+		glUniform1f(glGetUniformLocation(terrainProgramID, "slopeBias1"), slopeBias1);
+					
+		glUniform1f(glGetUniformLocation(terrainProgramID, "heightBias0"), heightBias0);
+		glUniform1f(glGetUniformLocation(terrainProgramID, "heightSharpness0"), heightSharpness0);
+		glUniform1f(glGetUniformLocation(terrainProgramID, "heightBias1"), heightBias1);
+		glUniform1f(glGetUniformLocation(terrainProgramID, "heightSharpness1"), heightSharpness1);
+					
+		glUniform1f(glGetUniformLocation(terrainProgramID, "distanceNear"), distanceNear);
+		glUniform1f(glGetUniformLocation(terrainProgramID, "fogBlendDistance"), fogBlendDistance);
+		glUniform1f(glGetUniformLocation(terrainProgramID, "maxFog"), maxFog);
+		glUniform3fv(glGetUniformLocation(terrainProgramID, "fogColor"), 1, &fogColor[0]);
+
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D_ARRAY, elevationMapTextureArray);
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, cubemap->irradianceMap);
+		glActiveTexture(GL_TEXTURE2);
+		glBindTexture(GL_TEXTURE_2D, macroTexture);
+		glActiveTexture(GL_TEXTURE3);
+		glBindTexture(GL_TEXTURE_2D, noiseTexture);
+		
+		glActiveTexture(GL_TEXTURE4);
+		glBindTexture(GL_TEXTURE_2D, albedo0);
+		glActiveTexture(GL_TEXTURE5);
+		glBindTexture(GL_TEXTURE_2D, albedo1);
+		glActiveTexture(GL_TEXTURE6);
+		glBindTexture(GL_TEXTURE_2D, albedo2);
+		glActiveTexture(GL_TEXTURE7);
+		glBindTexture(GL_TEXTURE_2D, albedo3);
+		glActiveTexture(GL_TEXTURE8);
+		glBindTexture(GL_TEXTURE_2D, albedo5);
+		glActiveTexture(GL_TEXTURE9);
+		glBindTexture(GL_TEXTURE_2D, albedo6);
+		
+		glActiveTexture(GL_TEXTURE10);
+		glBindTexture(GL_TEXTURE_2D, normal0);
+		glActiveTexture(GL_TEXTURE11);
+		glBindTexture(GL_TEXTURE_2D, normal1);
+		glActiveTexture(GL_TEXTURE12);
+		glBindTexture(GL_TEXTURE_2D, normal2);
+		glActiveTexture(GL_TEXTURE13);
+		glBindTexture(GL_TEXTURE_2D, normal3);
+		glActiveTexture(GL_TEXTURE14);
+		glBindTexture(GL_TEXTURE_2D, normal4);
+		glActiveTexture(GL_TEXTURE15);
+		glBindTexture(GL_TEXTURE_2D, normal5);
+		glActiveTexture(GL_TEXTURE16);
+		glBindTexture(GL_TEXTURE_2D, normal6);
+		glActiveTexture(GL_TEXTURE17);
+		glBindTexture(GL_TEXTURE_2D, normal7);
+
+		std::vector<TerrainVertexAttribs> instanceArray;
+
+		// BLOCKS
+		for (int i = 0; i < CLIPMAP_LEVEL; i++) {
+
+			for (int j = 0; j < 12; j++) {
+
+				glm::vec4 startInWorldSpace;
+				glm::vec4 endInWorldSpace;
+				AABB_Box aabb = blockAABBs[i * 12 + j];
+				startInWorldSpace = aabb.start;
+				endInWorldSpace = aabb.end;
+
+				if (Terrain::intersectsAABB(startInWorldSpace, endInWorldSpace)) {
+					TerrainVertexAttribs attribs;
+					attribs.level = i;
+					attribs.model = glm::mat4(1);
+					attribs.position = blockPositions[i * 12 + j];
+					attribs.color = BLOCK_COLOR;
+					instanceArray.push_back(attribs);
+				}
+			}
+		}
+
+		for (int i = 0; i < 4; i++) {
+
+			glm::vec4 startInWorldSpace;
+			glm::vec4 endInWorldSpace;
+			AABB_Box aabb = blockAABBs[CLIPMAP_LEVEL * 12 + i];
+			startInWorldSpace = aabb.start;
+			endInWorldSpace = aabb.end;
+
+			//if (Terrain::intersectsAABB(startInWorldSpace, endInWorldSpace)) {
+			TerrainVertexAttribs attribs;
+			attribs.level = 0;
+			attribs.model = glm::mat4(1);
+			attribs.position = blockPositions[CLIPMAP_LEVEL * 12 + i];
+			attribs.color = BLOCK_COLOR;
+			instanceArray.push_back(attribs);
+			//}
+		}
+
+		if (instanceArray.size()) {
+			Terrain::drawElementsInstanced(blockVAO, instanceArray, blockIndiceCount);
+			instanceArray.clear();
+		}
+
+		// RING FIXUP VERTICAL
+		for (int i = 0; i < CLIPMAP_LEVEL; i++) {
+
+			TerrainVertexAttribs attribs;
+			attribs.level = i;
+			attribs.model = glm::mat4(1);
+			attribs.color = FIXUP_VERTICAL_COLOR;
+			attribs.position = ringFixUpVerticalPositions[i * 2 + 0];
+			instanceArray.push_back(attribs);
+			attribs.position = ringFixUpVerticalPositions[i * 2 + 1];
+			instanceArray.push_back(attribs);
+		}
+
+		{
+			TerrainVertexAttribs attribs;
+			attribs.level = 0;
+			attribs.model = glm::mat4(1);
+			attribs.color = FIXUP_VERTICAL_COLOR;
+			attribs.position = ringFixUpVerticalPositions[CLIPMAP_LEVEL * 2 + 0];
+			instanceArray.push_back(attribs);
+			attribs.position = ringFixUpVerticalPositions[CLIPMAP_LEVEL * 2 + 1];
+			instanceArray.push_back(attribs);
+		}
+
+		Terrain::drawElementsInstanced(ringFixUpVerticalVAO, instanceArray, ringFixUpVerticalIndiceCount);
+		instanceArray.clear();
+
+		// RING FIXUP HORIZONTAL
+		for (int i = 0; i < CLIPMAP_LEVEL; i++) {
+
+			TerrainVertexAttribs attribs;
+			attribs.level = i;
+			attribs.model = glm::mat4(1);
+			attribs.color = FIXUP_HORIZONTAL_COLOR;
+			attribs.position = ringFixUpHorizontalPositions[i * 2 + 0];
+			instanceArray.push_back(attribs);
+			attribs.position = ringFixUpHorizontalPositions[i * 2 + 1];
+			instanceArray.push_back(attribs);
+		}
+
+		{
+			TerrainVertexAttribs attribs;
+			attribs.level = 0;
+			attribs.model = glm::mat4(1);
+			attribs.color = FIXUP_HORIZONTAL_COLOR;
+			attribs.position = ringFixUpHorizontalPositions[CLIPMAP_LEVEL * 2 + 0];
+			instanceArray.push_back(attribs);
+			attribs.position = ringFixUpHorizontalPositions[CLIPMAP_LEVEL * 2 + 1];
+			instanceArray.push_back(attribs);
+		}
+
+		Terrain::drawElementsInstanced(ringFixUpHorizontalVAO, instanceArray, ringFixUpHorizontalIndiceCount);
+		instanceArray.clear();
+
+		// INTERIOR TRIM
+		for (int i = 0; i < CLIPMAP_LEVEL - 1; i++) {
+
+			TerrainVertexAttribs attribs;
+			attribs.level = i + 1;
+			attribs.model = glm::rotate(glm::mat4(1), glm::radians(rotAmounts[i]), glm::vec3(0.0f, 1.0f, 0.0f));
+			attribs.position = interiorTrimPositions[i];
+			attribs.color = INTERIOR_TRIM_COLOR;
+			instanceArray.push_back(attribs);
+		}
+		Terrain::drawElementsInstanced(interiorTrimVAO, instanceArray, interiorTrimIndiceCount);
+		instanceArray.clear();
+
+		// OUTER DEGENERATE
+		for (int i = 0; i < CLIPMAP_LEVEL - 1; i++) {
+
+			TerrainVertexAttribs attribs;
+			attribs.level = i;
+			attribs.model = glm::mat4(1);
+			attribs.color = OUTER_DEGENERATE_COLOR;
+			attribs.position = outerDegeneratePositions[i];
+			instanceArray.push_back(attribs);
+		}
+		Terrain::drawElementsInstanced(outerDegenerateVAO, instanceArray, outerDegenerateIndiceCount);
+		instanceArray.clear();
+
+		// SMALL SQUARE
+		TerrainVertexAttribs attribs;
+		attribs.level = 0;
+		attribs.model = glm::mat4(1);
+		attribs.position = smallSquarePosition;
+		attribs.color = SMALL_SQUARE_COLOR;
+		instanceArray.push_back(attribs);
+		Terrain::drawElementsInstanced(smallSquareVAO, instanceArray, smallSquareIndiceCount);
+
+		// Draw bounding boxes
+		if (showBounds) {
+			for (int i = 0; i < CLIPMAP_LEVEL; i++) {
+
+				for (int j = 0; j < 12; j++) {
+
+					AABB_Box aabb = blockAABBs[i * 12 + j];
+					glm::vec3 pos = (aabb.start + aabb.end) * 0.5f;
+					glm::vec3 scale = aabb.end - aabb.start;
+					glm::mat4 model = glm::translate(glm::mat4(1), pos) * glm::scale(glm::mat4(1), scale);
+					glm::mat4 PVM = PV * model;
+					glm::vec3 color = glm::vec3(1, 1, 1);
+					CoreContext::instance->renderer->drawBoundingBoxVAO(PVM, color);
+				}
+			}
+
+			for (int i = 0; i < 4; i++) {
+
+				AABB_Box aabb = blockAABBs[CLIPMAP_LEVEL * 12 + i];
+				glm::vec3 pos = (aabb.start + aabb.end) * 0.5f;
+				glm::vec3 scale = aabb.end - aabb.start;
+				glm::mat4 model = glm::translate(glm::mat4(1), pos) * glm::scale(glm::mat4(1), scale);
+				glm::mat4 PVM = PV * model;
+				glm::vec3 color = glm::vec3(1, 1, 1);
+				CoreContext::instance->renderer->drawBoundingBoxVAO(PVM, color);
+			}
+		}
+	}
+
+	/*
+	* Draw nested grids instanced.
+	*/
+	void Terrain::drawElementsInstanced(unsigned int VAO, std::vector<TerrainVertexAttribs>& instanceArray, unsigned int indiceCount) {
+
+		unsigned int instanceBuffer;
+		glGenBuffers(1, &instanceBuffer);
+		glBindBuffer(GL_ARRAY_BUFFER, instanceBuffer);
+		glBufferData(GL_ARRAY_BUFFER, instanceArray.size() * sizeof(TerrainVertexAttribs), &instanceArray[0], GL_STATIC_DRAW);
+
+		glBindVertexArray(VAO);
+		glEnableVertexAttribArray(1);
+		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(TerrainVertexAttribs), (void*)0);
+		glEnableVertexAttribArray(2);
+		glVertexAttribPointer(2, 1, GL_FLOAT, GL_FALSE, sizeof(TerrainVertexAttribs), (void*)(sizeof(glm::vec2)));
+		glEnableVertexAttribArray(3);
+		glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof(TerrainVertexAttribs), (void*)(sizeof(glm::vec2) + sizeof(float)));
+		glEnableVertexAttribArray(4);
+		glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, sizeof(TerrainVertexAttribs), (void*)(sizeof(glm::vec2) + sizeof(float) + sizeof(glm::vec4)));
+		glEnableVertexAttribArray(5);
+		glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, sizeof(TerrainVertexAttribs), (void*)(sizeof(glm::vec2) + sizeof(float) + sizeof(glm::vec4) * 2));
+		glEnableVertexAttribArray(6);
+		glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, sizeof(TerrainVertexAttribs), (void*)(sizeof(glm::vec2) + sizeof(float) + sizeof(glm::vec4) * 3));
+		glEnableVertexAttribArray(7);
+		glVertexAttribPointer(7, 3, GL_FLOAT, GL_FALSE, sizeof(TerrainVertexAttribs), (void*)(sizeof(glm::vec2) + sizeof(float) + sizeof(glm::vec4) * 4));
+
+		glVertexAttribDivisor(1, 1);
+		glVertexAttribDivisor(2, 1);
+		glVertexAttribDivisor(3, 1);
+		glVertexAttribDivisor(4, 1);
+		glVertexAttribDivisor(5, 1);
+		glVertexAttribDivisor(6, 1);
+		glVertexAttribDivisor(7, 1);
+
+		glDrawElementsInstanced(GL_TRIANGLES, static_cast<unsigned int>(indiceCount), GL_UNSIGNED_INT, 0, instanceArray.size());
+
+		glBindVertexArray(0);
+		glDeleteBuffers(1, &instanceBuffer);
+	}
+
+	/*
+	* When camera moves, nested grids positions are also updated in this function.
+	*/
+	void Terrain::calculateBlockPositions(glm::vec3 camPosition) {
+
+		for (int i = 0; i < CLIPMAP_LEVEL; i++) {
+			/*
+			*      Z+
+			*      ^
+			*      |  This is our reference for numbers
+			* x+ <-
+			*/
+			// Blocks move periodically according to camera's position.
+			// For example:
+			// Cam pos          : 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ...
+			// Block at level 0 : 0, 0, 2, 2, 4, 4, 6, 6, 8, 8, 10 ...
+			// Block at level 1 : 0, 0, 0, 0, 4, 4, 4, 4, 8, 8, 8  ...
+
+			float scale = 1 << i;
+			int requiredCameraDistance = PATCH_WIDTH * scale;
+			float pX = (int)(camPosition.x / requiredCameraDistance) * PATCH_WIDTH;
+			float pZ = (int)(camPosition.z / requiredCameraDistance) * PATCH_WIDTH;
+			int pI0 = PATCH_WIDTH - 2 * (CLIPMAP_RESOLUTION);
+			int pI1 = PATCH_WIDTH - (CLIPMAP_RESOLUTION + 1);
+			int pI2 = PATCH_WIDTH;
+			int pI3 = PATCH_WIDTH + (CLIPMAP_RESOLUTION - 1);
+
+			// For outer trim rotation. This '2' at the end is constant. Because of binary movement style
+			int rotX = (int)((pX * scale) / requiredCameraDistance) % 2;
+			int rotZ = (int)((pZ * scale) / requiredCameraDistance) % 2;
+
+			/*   BLOCKS
+			*  0 11 10  9
+			*  1        8
+			*  2        7
+			*  3  4  5  6
+			*/
+			blockPositions[i * 12 + 0] = glm::vec2((pX + pI3) * scale, (pZ + pI3) * scale); // 0
+			blockPositions[i * 12 + 1] = glm::vec2((pX + pI3) * scale, (pZ + pI2) * scale); // 1
+			blockPositions[i * 12 + 2] = glm::vec2((pX + pI3) * scale, (pZ + pI1) * scale); // 2
+			blockPositions[i * 12 + 3] = glm::vec2((pX + pI3) * scale, (pZ + pI0) * scale); // 3
+			blockPositions[i * 12 + 4] = glm::vec2((pX + pI2) * scale, (pZ + pI0) * scale); // 4
+			blockPositions[i * 12 + 5] = glm::vec2((pX + pI1) * scale, (pZ + pI0) * scale); // 5
+			blockPositions[i * 12 + 6] = glm::vec2((pX + pI0) * scale, (pZ + pI0) * scale); // 6
+			blockPositions[i * 12 + 7] = glm::vec2((pX + pI0) * scale, (pZ + pI1) * scale); // 7
+			blockPositions[i * 12 + 8] = glm::vec2((pX + pI0) * scale, (pZ + pI2) * scale); // 8
+			blockPositions[i * 12 + 9] = glm::vec2((pX + pI0) * scale, (pZ + pI3) * scale); // 9
+			blockPositions[i * 12 + 10] = glm::vec2((pX + pI1) * scale, (pZ + pI3) * scale); // 10
+			blockPositions[i * 12 + 11] = glm::vec2((pX + pI2) * scale, (pZ + pI3) * scale); // 11
+
+			/* RING FIX-UP VERTICAL
+			*  0
+			*  1
+			*/
+			ringFixUpVerticalPositions[i * 2 + 0] = glm::vec2(pX * scale, (pZ + pI3) * scale); // 0
+			ringFixUpVerticalPositions[i * 2 + 1] = glm::vec2(pX * scale, (pZ + pI0) * scale); // 1;
+
+			/* RING FIX-UP HORIZONTAL
+			*  0   1
+			*/
+			ringFixUpHorizontalPositions[i * 2 + 0] = glm::vec2((pX + pI3) * scale, pZ * scale); // 0
+			ringFixUpHorizontalPositions[i * 2 + 1] = glm::vec2((pX + pI0) * scale, pZ * scale); // 1
+
+			// INTERIOR TRIM
+			interiorTrimPositions[i] = glm::vec2((pX + PATCH_WIDTH * (1 - rotX)) * scale, (pZ + PATCH_WIDTH * (1 - rotZ)) * scale);
+
+			if (rotX == 0 && rotZ == 0)
+				rotAmounts[i] = 0.f;
+			if (rotX == 0 && rotZ == 1)
+				rotAmounts[i] = 90.f;
+			if (rotX == 1 && rotZ == 0)
+				rotAmounts[i] = 270.f;
+			if (rotX == 1 && rotZ == 1)
+				rotAmounts[i] = 180.f;
+
+			// OUTER DEGENERATE
+			outerDegeneratePositions[i] = glm::vec2((pX + pI0) * scale, (pZ + pI0) * scale);
+		}
+
+		float pX = (int)(camPosition.x / PATCH_WIDTH) * PATCH_WIDTH;
+		float pZ = (int)(camPosition.z / PATCH_WIDTH) * PATCH_WIDTH;
+
+		int pI0 = PATCH_WIDTH - 2 * (CLIPMAP_RESOLUTION);
+		int pI1 = PATCH_WIDTH - (CLIPMAP_RESOLUTION + 1);
+		int pI2 = PATCH_WIDTH;
+		int pI3 = PATCH_WIDTH + (CLIPMAP_RESOLUTION - 1);
+
+		// 0 3
+		// 1 2
+		blockPositions[CLIPMAP_LEVEL * 12 + 0] = glm::vec2((pX + pI2), (pZ + pI2));
+		blockPositions[CLIPMAP_LEVEL * 12 + 1] = glm::vec2((pX + pI2), (pZ + pI1));
+		blockPositions[CLIPMAP_LEVEL * 12 + 2] = glm::vec2((pX + pI1), (pZ + pI1));
+		blockPositions[CLIPMAP_LEVEL * 12 + 3] = glm::vec2((pX + pI1), (pZ + pI2));
+
+		// 0
+		// 1
+		ringFixUpVerticalPositions[CLIPMAP_LEVEL * 2 + 0] = glm::vec2(pX, pZ + PATCH_WIDTH);
+		ringFixUpVerticalPositions[CLIPMAP_LEVEL * 2 + 1] = glm::vec2(pX, pZ + 1 - CLIPMAP_RESOLUTION);
+
+		// 0 1
+		ringFixUpHorizontalPositions[CLIPMAP_LEVEL * 2 + 0] = glm::vec2(pX + PATCH_WIDTH, pZ);
+		ringFixUpHorizontalPositions[CLIPMAP_LEVEL * 2 + 1] = glm::vec2(pX + 1 - CLIPMAP_RESOLUTION, pZ);
+
+		smallSquarePosition = glm::vec2(pX, pZ);
+	}
+
+	/*
+	* Streams terrain height information as camera moves.
+	*/
+	void Terrain::streamTerrain(glm::vec3 newCamPos) {
+
+		for (int level = 0; level < CLIPMAP_LEVEL; level++) {
+
+			glm::ivec2 old_tileIndex = Terrain::getTileIndex(level, cameraPosition);
+			glm::ivec2 old_tileStart = old_tileIndex - MEM_TILE_ONE_SIDE / 2;
+			glm::ivec2 old_border = old_tileStart % MEM_TILE_ONE_SIDE;
+
+			glm::ivec2 new_tileIndex = Terrain::getTileIndex(level, newCamPos);
+			glm::ivec2 new_tileStart = new_tileIndex - MEM_TILE_ONE_SIDE / 2;
+			glm::ivec2 new_border = new_tileStart % MEM_TILE_ONE_SIDE;
+
+			glm::ivec2 tileDelta = new_tileIndex - old_tileIndex;
+
+			if (tileDelta.x == 0 && tileDelta.y == 0)
+				continue;
+
+			if (tileDelta.x >= MEM_TILE_ONE_SIDE || tileDelta.y >= MEM_TILE_ONE_SIDE || tileDelta.x <= -MEM_TILE_ONE_SIDE || tileDelta.y <= -MEM_TILE_ONE_SIDE) {
+
+				unsigned char* heightData = new unsigned char[MEM_TILE_ONE_SIDE * MEM_TILE_ONE_SIDE * TILE_SIZE * TILE_SIZE * 4];
+				Terrain::loadHeightmapAtLevel(level, newCamPos, heightData);
+				Terrain::updateHeightMapTextureArrayPartial(level, glm::ivec2(TILE_SIZE * MEM_TILE_ONE_SIDE, TILE_SIZE * MEM_TILE_ONE_SIDE), glm::ivec2(0, 0), heightData);
+				delete[] heightData;
+				continue;
+			}
+
+			Terrain::streamTerrainHorizontal(old_tileIndex, old_tileStart, old_border, new_tileIndex, new_tileStart, new_border, tileDelta, level);
+			old_tileIndex.x = new_tileIndex.x;
+			old_tileStart.x = new_tileStart.x;
+			old_border.x = new_border.x;
+			tileDelta.x = 0;
+			Terrain::streamTerrainVertical(old_tileIndex, old_tileStart, old_border, new_tileIndex, new_tileStart, new_border, tileDelta, level);
+		}
+	}
+
+	/*
+	* Controls any data update when camera movement is in x direction
+	*/
+	void Terrain::streamTerrainHorizontal(glm::ivec2 old_tileIndex, glm::ivec2 old_tileStart, glm::ivec2 old_border, glm::ivec2 new_tileIndex, glm::ivec2 new_tileStart, glm::ivec2 new_border, glm::ivec2 tileDelta, int level) {
+
+		if (tileDelta.x > 0) {
+
+			old_tileStart.x += MEM_TILE_ONE_SIDE;
+			unsigned char* heightData = new unsigned char[MEM_TILE_ONE_SIDE * TILE_SIZE * TILE_SIZE * TERRAIN_STACK_NUM_CHANNELS];
+
+			for (int x = 0; x < tileDelta.x; x++) {
+
+				int startY = old_tileStart.y;
+
+				for (int z = 0; z < MEM_TILE_ONE_SIDE; z++) {
+
+					Terrain::writeHeightDataToGPUBuffer(glm::ivec2(0, old_border.y), glm::ivec2(old_tileStart.x, startY), TILE_SIZE, heightData, level);
+					old_border.y++;
+					old_border.y %= MEM_TILE_ONE_SIDE;
+					startY++;
+				}
+
+				Terrain::updateHeightMapTextureArrayPartial(level, glm::ivec2(TILE_SIZE, TILE_SIZE * MEM_TILE_ONE_SIDE), glm::ivec2(old_border.x * TILE_SIZE, 0), heightData);
+				old_border.x++;
+				old_border.x %= MEM_TILE_ONE_SIDE;
+				old_tileStart.x++;
+			}
+			delete[] heightData;
+		}
+		else if (tileDelta.x < 0) {
+
+			old_tileStart.x -= 1;
+			unsigned char* heightData = new unsigned char[MEM_TILE_ONE_SIDE * TILE_SIZE * TILE_SIZE * TERRAIN_STACK_NUM_CHANNELS];
+
+			for (int x = tileDelta.x; x < 0; x++) {
+
+				old_border.x--;
+				old_border.x += 4;
+				old_border.x %= MEM_TILE_ONE_SIDE;
+				int startY = old_tileStart.y;
+
+				for (int z = 0; z < MEM_TILE_ONE_SIDE; z++) {
+
+					Terrain::writeHeightDataToGPUBuffer(glm::ivec2(0, old_border.y), glm::ivec2(old_tileStart.x, startY), TILE_SIZE, heightData, level);
+					old_border.y++;
+					old_border.y %= MEM_TILE_ONE_SIDE;
+					startY++;
+				}
+				Terrain::updateHeightMapTextureArrayPartial(level, glm::ivec2(TILE_SIZE, TILE_SIZE * MEM_TILE_ONE_SIDE), glm::ivec2(old_border.x * TILE_SIZE, 0), heightData);
+				old_tileStart.x--;
+			}
+			delete[] heightData;
+		}
+	}
+
+	/*
+	* Controls any data update when camera movement is in z direction
+	*/
+	void Terrain::streamTerrainVertical(glm::ivec2 old_tileIndex, glm::ivec2 old_tileStart, glm::ivec2 old_border, glm::ivec2 new_tileIndex, glm::ivec2 new_tileStart, glm::ivec2 new_border, glm::ivec2 tileDelta, int level) {
+
+		if (tileDelta.y > 0) {
+
+			old_tileStart.y += MEM_TILE_ONE_SIDE;
+			unsigned char* heightData = new unsigned char[MEM_TILE_ONE_SIDE * TILE_SIZE * TILE_SIZE * TERRAIN_STACK_NUM_CHANNELS];
+
+			for (int z = 0; z < tileDelta.y; z++) {
+
+				int startX = old_tileStart.x;
+
+				for (int x = 0; x < MEM_TILE_ONE_SIDE; x++) {
+
+					Terrain::writeHeightDataToGPUBuffer(glm::ivec2(old_border.x, 0), glm::ivec2(startX, old_tileStart.y), MEM_TILE_ONE_SIDE * TILE_SIZE, heightData, level);
+					old_border.x++;
+					old_border.x %= MEM_TILE_ONE_SIDE;
+					startX++;
+				}
+				Terrain::updateHeightMapTextureArrayPartial(level, glm::ivec2(TILE_SIZE * MEM_TILE_ONE_SIDE, TILE_SIZE), glm::ivec2(0, old_border.y * TILE_SIZE), heightData);
+				old_border.y++;
+				old_border.y %= MEM_TILE_ONE_SIDE;
+				old_tileStart.y++;
+			}
+
+			delete[] heightData;
+		}
+		else if (tileDelta.y < 0) {
+
+			old_tileStart.y -= 1;
+
+			unsigned char* heightData = new unsigned char[MEM_TILE_ONE_SIDE * TILE_SIZE * TILE_SIZE * TERRAIN_STACK_NUM_CHANNELS];
+
+			for (int z = tileDelta.y; z < 0; z++) {
+
+				old_border.y--;
+				old_border.y += 4;
+				old_border.y %= MEM_TILE_ONE_SIDE;
+				int startX = old_tileStart.x;
+
+				for (int x = 0; x < MEM_TILE_ONE_SIDE; x++) {
+
+					Terrain::writeHeightDataToGPUBuffer(glm::ivec2(old_border.x, 0), glm::ivec2(startX, old_tileStart.y), MEM_TILE_ONE_SIDE * TILE_SIZE, heightData, level);
+					old_border.x++;
+					old_border.x %= MEM_TILE_ONE_SIDE;
+					startX++;
+				}
+				Terrain::updateHeightMapTextureArrayPartial(level, glm::ivec2(TILE_SIZE * MEM_TILE_ONE_SIDE, TILE_SIZE), glm::ivec2(0, old_border.y * TILE_SIZE), heightData);
+				old_tileStart.y--;
+			}
+			delete[] heightData;
+		}
+	}
+
+	/*
+	* We toroidally update the height values of the texture in GPU.
+	* In this case we only update small chunks of the memory instead of updating all data.
+	*/
+	void Terrain::writeHeightDataToGPUBuffer(glm::ivec2 index, glm::ivec2 tileStart, int texWidth, unsigned char* heightMap, int level) {
+
+		int startX = index.x * TILE_SIZE;
+		int startZ = index.y * TILE_SIZE;
+
+		int coord_x = (tileStart.x - clipmapStartIndices[level].x) * TILE_SIZE;
+		int coord_z = (tileStart.y - clipmapStartIndices[level].x) * TILE_SIZE;
+
+		int stackSize = (clipmapStartIndices[level].y - clipmapStartIndices[level].x) * TILE_SIZE;
+
+		for (int i = 0; i < TILE_SIZE; i++) {
+			for (int j = 0; j < TILE_SIZE; j++) {
+
+				int indexInChunk = ((i + coord_z) * stackSize + coord_x + j) * TERRAIN_STACK_NUM_CHANNELS;
+				int indexInHeightmap = ((i + startZ) * texWidth + j + startX) * TERRAIN_STACK_NUM_CHANNELS;
+
+				// Data that will be sent to GPU
+				heightMap[indexInHeightmap] = heightmapStack[level][indexInChunk];
+				heightMap[indexInHeightmap + 1] = heightmapStack[level][indexInChunk + 1];
+			}
+		}
+	}
+
+	/*
+	* Loads heightmap on a specific level from heightmap stack.
+	*/
+	void Terrain::loadHeightmapAtLevel(int level, glm::vec3 camPos, unsigned char* heightData) {
+
+		glm::ivec2 tileIndex = Terrain::getTileIndex(level, camPos);
+		glm::ivec2 tileStart = tileIndex - MEM_TILE_ONE_SIDE / 2;
+		glm::ivec2 border = tileStart % MEM_TILE_ONE_SIDE;
+
+		for (int i = 0; i < MEM_TILE_ONE_SIDE; i++) {
+
+			int startX = tileStart.x;
+
+			for (int j = 0; j < MEM_TILE_ONE_SIDE; j++) {
+
+				Terrain::writeHeightDataToGPUBuffer(border, glm::ivec2(startX, tileStart.y), MEM_TILE_ONE_SIDE * TILE_SIZE, heightData, level);
+				border.x++;
+				border.x %= MEM_TILE_ONE_SIDE;
+				startX++;
+			}
+
+			border.y++;
+			border.y %= MEM_TILE_ONE_SIDE;
+			tileStart.y++;
+		}
+	}
+
+	/*
+	* Partially update heightmap texture in gpu memory
+	*/
+	void Terrain::updateHeightMapTextureArrayPartial(int level, glm::ivec2 size, glm::ivec2 position, unsigned char* heights) {
+
+		glBindTexture(GL_TEXTURE_2D_ARRAY, elevationMapTextureArray);
+		glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, position.x, position.y, level, size.x, size.y, 1, GL_RG, GL_UNSIGNED_BYTE, &heights[0]);
+		glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
+	}
+
+	/*
+	* Since blocks are moving as camera moves, we have to calculate bounding box of block each time block position is changed.
+	*/
+	void Terrain::calculateBoundingBoxes(glm::vec3 camPos) {
+
+		for (int level = 0; level < CLIPMAP_LEVEL; level++) {
+
+			glm::ivec2 old_clipmapPos = Terrain::getClipmapPosition(level, cameraPosition);
+			glm::ivec2 new_clipmapPos = Terrain::getClipmapPosition(level, camPos);
+
+			if (old_clipmapPos.x != new_clipmapPos.x || old_clipmapPos.y != new_clipmapPos.y) {
+				for (int i = 0; i < 12; i++)
+					blockAABBs[level * 12 + i] = Terrain::getBlockBoundingBox(level * 12 + i, level);
+			}
+		}
+
+		glm::ivec2 old_clipmapPos = Terrain::getClipmapPosition(0, cameraPosition);
+		glm::ivec2 new_clipmapPos = Terrain::getClipmapPosition(0, camPos);
+
+		if (old_clipmapPos.x != new_clipmapPos.x || old_clipmapPos.y != new_clipmapPos.y) {
+			for (int i = 0; i < 4; i++)
+				blockAABBs[CLIPMAP_LEVEL * 12 + i] = Terrain::getBlockBoundingBox(CLIPMAP_LEVEL * 12 + i, 0);
+		}
+	}
+
+	/*
+	* Each nested block has bounding box that will be used for frustum culling.
+	*/
+	AABB_Box Terrain::getBlockBoundingBox(int index, int level) {
+
+		glm::ivec2 blockPositionInWorldSpace = blockPositions[index];
+
+		int startPos = clipmapStartIndices[level].x;
+		int endPos = clipmapStartIndices[level].y;
+		int startPosWorldSpace = (startPos * TILE_SIZE) << level;
+
+		int sizeInHeightmap = (endPos - startPos) * TILE_SIZE;
+		int lowResolutionHeightmapTextureSize = sizeInHeightmap >> MIP_STACK_DIVISOR_POWER;
+
+		glm::ivec2 startPosInHeightmapWorldSpace = glm::ivec2(startPosWorldSpace, startPosWorldSpace);
+		glm::ivec2 offsetWorldSpace = blockPositionInWorldSpace - startPosInHeightmapWorldSpace;
+
+		// this is where clipmap position is equivalent in low resolution heightmap
+		glm::ivec2 offsetInLowResolutionHeightmap = (offsetWorldSpace >> level) >> MIP_STACK_DIVISOR_POWER;
+		
+		int blockSizeInLowResolutionHeightmapStack = CLIPMAP_RESOLUTION >> MIP_STACK_DIVISOR_POWER;
+		int blockSizeInWorldSpace = (CLIPMAP_RESOLUTION - 1) << level;
+
+		// size value of clipmap in low resolution heightmap
+		glm::ivec2 sizeInLowResolutionHeightmapStack = glm::ivec2(blockSizeInLowResolutionHeightmapStack, blockSizeInLowResolutionHeightmapStack);
+
+		unsigned char min = 255;
+		unsigned char max = 0;
+
+		int startX = offsetInLowResolutionHeightmap.x;
+		int endX = startX + sizeInLowResolutionHeightmapStack.x;
+		int startZ = offsetInLowResolutionHeightmap.y;
+		int endZ = startZ + sizeInLowResolutionHeightmapStack.y;
+
+		for (int i = startZ; i < endZ; i++) {
+			for (int j = startX; j < endX; j++) {
+				
+				int index = i * lowResolutionHeightmapTextureSize + j;
+				if (lowResolustionHeightmapStack[level][index] < min)
+					min = lowResolustionHeightmapStack[level][index];
+
+				if (lowResolustionHeightmapStack[level][index] > max)
+					max = lowResolustionHeightmapStack[level][index];
+			}
+		}
+
+		float margin = 1.f;
+		glm::vec4 corner0(blockPositionInWorldSpace.x - margin, min * (MAX_HEIGHT / 255.f) - margin, blockPositionInWorldSpace.y - margin, 1);
+		glm::vec4 corner1(blockPositionInWorldSpace.x + blockSizeInWorldSpace + margin, max * (MAX_HEIGHT / 255.f) + margin, blockPositionInWorldSpace.y + blockSizeInWorldSpace + margin, 1);
+
+		AABB_Box boundingBox;
+		boundingBox.start = corner0;
+		boundingBox.end = corner1;
+		return boundingBox;
+	}
+
+	// ref: https://arm-software.github.io/opengl-es-sdk-for-android/terrain.html
+	bool Terrain::intersectsAABB(glm::vec4& start, glm::vec4& end) {
+		// If all corners of an axis-aligned bounding box are on the "wrong side" (negative distance)
+		// of at least one of the frustum planes, we can safely cull the mesh.
+		glm::vec4 corners[8];
+
+		corners[0] = glm::vec4(start.x, start.y, start.z, 1);
+		corners[1] = glm::vec4(start.x, start.y, end.z, 1);
+		corners[2] = glm::vec4(start.x, end.y, start.z, 1);
+		corners[3] = glm::vec4(start.x, end.y, end.z, 1);
+		corners[4] = glm::vec4(end.x, start.y, start.z, 1);
+		corners[5] = glm::vec4(end.x, start.y, end.z, 1);
+		corners[6] = glm::vec4(end.x, end.y, start.z, 1);
+		corners[7] = glm::vec4(end.x, end.y, end.z, 1);
+
+		for (unsigned int p = 0; p < 6; p++)
+		{
+			bool inside_plane = false;
+			for (unsigned int c = 0; c < 8; c++)
+			{
+				// If dot product > 0, we're "inside" the frustum plane,
+				// otherwise, outside.
+				glm::vec4 plane = CoreContext::instance->scene->cameraInfo.planes[p];
+				if (glm::dot(corners[c], plane) > 0.0f)
+				{
+					inside_plane = true;
+					break;
+				}
+			}
+			if (!inside_plane)
+				return false;
+		}
+		return true;
+	}
+
+	glm::ivec2 Terrain::getClipmapPosition(int level, glm::vec3& camPos) {
+
+		int patchWidth = 2;
+		float patchOffset = 1 << level;
+		float requiredCameraDisplacement = patchWidth * patchOffset;
+		float posX = (int)(camPos.x / requiredCameraDisplacement) * requiredCameraDisplacement;
+		float posZ = (int)(camPos.z / requiredCameraDisplacement) * requiredCameraDisplacement;
+		return glm::ivec2(posX + patchOffset, posZ + patchOffset);
+	}
+
+	glm::ivec2 Terrain::getTileIndex(int level, glm::vec3& camPos) {
+
+		int tileSizeInReal = TILE_SIZE * (1 << level);
+		glm::ivec2 clipmapPos = Terrain::getClipmapPosition(level, camPos);
+		return glm::ivec2(clipmapPos.x / tileSizeInReal, clipmapPos.y / tileSizeInReal);
 	}
 }

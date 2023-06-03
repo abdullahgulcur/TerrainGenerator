@@ -7,9 +7,9 @@
 
 layout (location = 0) in vec2 aPos;
 layout (location = 1) in vec2 position_instance;
-layout (location = 3) in float level_instance;
-layout (location = 4) in mat4 model_instance;
-layout (location = 8) in vec3 color_instance;
+layout (location = 2) in float level_instance;
+layout (location = 3) in mat4 model_instance;
+layout (location = 7) in vec3 color_instance;
 
 uniform mat4 PV;
 

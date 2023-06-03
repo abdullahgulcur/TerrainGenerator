@@ -10,8 +10,8 @@
 		<Overlay overlayBlendScale0="0.165000" overlayBlendAmount0="0.630000" overlayBlendPower0="6.640000" overlayBlendOpacity0="0.920000" overlayBlendScale1="0.550000" overlayBlendAmount1="0.600000" overlayBlendPower1="9.010000" overlayBlendOpacity1="0.900000" overlayBlendScale2="0.605000" overlayBlendAmount2="0.660000" overlayBlendPower2="10.100000" overlayBlendOpacity2="0.980000"/>
 		<Color0 color_r="0.855556" color_g="0.855556" color_b="0.855556"/>
 		<Color1 color_r="0.838889" color_g="0.838889" color_b="0.838889"/>
-		<Slope slopeSharpness0="0.096000" slopeSharpness1="0.061000" slopeBias0="0.886000" slopeBias1="0.863000"/>
-		<Height heightBias0="2.300000" heightSharpness0="1.500000" heightBias1="114.699997" heightSharpness1="4.770000"/>
+		<Slope slopeSharpness0="0.133000" slopeSharpness1="0.061000" slopeBias0="0.886000" slopeBias1="0.863000"/>
+		<Height heightBias0="2.300000" heightSharpness0="0.510000" heightBias1="114.699997" heightSharpness1="4.590000"/>
 		<Debug showBounds="0"/>
 	</Terrain>
 </Scene>

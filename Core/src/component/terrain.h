@@ -21,11 +21,13 @@
 #define MEM_TILE_ONE_SIDE 4
 #define TERRAIN_STACK_NUM_CHANNELS 2
 #define MIP_STACK_DIVISOR_POWER 3
-#define TERRAIN_TEXTURE_SIZE 512
+#define TERRAIN_TEXTURE_SIZE 1024
 #define MAX_HEIGHT 180
+#define MAP_SIZE 4096
 
 #define CLIPMAP_RESOLUTION 120
 #define CLIPMAP_LEVEL 4
+#define PATCH_WIDTH 2
 
 #define BLOCK_COLOR glm::vec3(1,1,1)
 #define FIXUP_VERTICAL_COLOR glm::vec3(1,1,0)
@@ -33,6 +35,9 @@
 #define INTERIOR_TRIM_COLOR glm::vec3(0,1,1)
 #define OUTER_DEGENERATE_COLOR glm::vec3(1,0,0)
 #define SMALL_SQUARE_COLOR glm::vec3(0,1,0)
+
+#define BLOCK_COUNT 12 * CLIPMAP_LEVEL + 4
+#define RINGFIXUP_COUNT 2 * CLIPMAP_LEVEL + 2
 
 namespace Core {
 
@@ -60,18 +65,17 @@ namespace Core {
 
 	public:
 
-		glm::vec2* blockPositions;
-		glm::vec2* ringFixUpPositions;
-		glm::vec2* ringFixUpVerticalPositions;
-		glm::vec2* interiorTrimPositions;
-		glm::vec2* outerDegeneratePositions;
-		float* rotAmounts;
+		AABB_Box blockAABBs[BLOCK_COUNT];
+		glm::vec2 blockPositions[BLOCK_COUNT];
+		glm::vec2 ringFixUpVerticalPositions[RINGFIXUP_COUNT];
+		glm::vec2 ringFixUpHorizontalPositions[RINGFIXUP_COUNT];
+		glm::vec2 interiorTrimPositions[CLIPMAP_LEVEL];
+		glm::vec2 outerDegeneratePositions[CLIPMAP_LEVEL];
 		glm::vec2 smallSquarePosition;
+		float rotAmounts[CLIPMAP_LEVEL];
 
-		AABB_Box* blockAABBs;
-
-		unsigned int programID;
-		unsigned int elevationMapTexture;
+		unsigned int terrainProgramID;
+		unsigned int elevationMapTextureArray;
 
 		/* Solution textures to get rid of tiling effect of the terrain */
 		unsigned int macroTexture;
@@ -96,30 +100,26 @@ namespace Core {
 		unsigned int normal6;
 		unsigned int normal7;
 
-		std::vector<unsigned int> blockIndices;
+		/* For the geometry */
 		unsigned int blockVAO;
-
+		unsigned int blockIndiceCount;
 		unsigned int ringFixUpVerticalVAO;
-		std::vector<unsigned int> ringFixUpVerticalIndices;
-
+		unsigned int ringFixUpVerticalIndiceCount;
 		unsigned int ringFixUpHorizontalVAO;
-		std::vector<unsigned int> ringFixUpHorizontalIndices;
-
+		unsigned int ringFixUpHorizontalIndiceCount;
 		unsigned int smallSquareVAO;
-		std::vector<unsigned int> smallSquareIndices;
-
+		unsigned int smallSquareIndiceCount;
 		unsigned int outerDegenerateVAO;
-		std::vector<unsigned int> outerDegenerateIndices;
-
-		std::vector<unsigned int> interiorTrimIndices;
+		unsigned int outerDegenerateIndiceCount;
 		unsigned int interiorTrimVAO;
+		unsigned int interiorTrimIndiceCount;
 
 		/*
 		* Heightmap stack is used by program while running to get 
 		* terrain height values to give shape of the terrain
 		*/
 		unsigned char** heightmapStack;
-		glm::ivec2* clipmapStartIndices;
+		glm::ivec2 clipmapStartIndices[CLIPMAP_LEVEL];
 
 		/*
 		* Low resolution heightmap stack is for calculating bounding box
@@ -208,30 +208,31 @@ namespace Core {
 		Terrain();
 		~Terrain();
 		void start();
+		void initShaders(const char* vertexShader, const char* fragShader);
+		void initBlockAABBs();
+		void initHeightmapStack(std::string path);
+		void loadTerrainHeightmapOnInit(glm::vec3 camPos, int clipmapLevel);
+		void generateTerrainClipmapsVertexArrays();
+		void createElevationMapTextureArray(unsigned char** heightmapArray);
+		void loadTextures();
+		unsigned char* resizeHeightmap(unsigned char* heightmap, int size);
+		unsigned char** createMipmaps(unsigned char* heights, int size, int totalLevel);
+		void createHeightmapStack(unsigned char** heightMapList, int width);
+		void createLowResolutionHeightmapStack();
 		void update(float dt);
 		void onDraw();
 		void drawElementsInstanced(unsigned int VAO, std::vector<TerrainVertexAttribs>& instanceArray, unsigned int indiceCount);
 		void calculateBlockPositions(glm::vec3 camPosition);
-		void initShaders(const char* vertexShader, const char* fragShader);
-		void generateTerrainClipmapsVertexArrays();
-		void loadTerrainHeightmapOnInit(glm::vec3 camPos, int clipmapLevel);
-		void loadHeightmapAtLevel(int level, glm::vec3 camPos, unsigned char* heightData);
 		void streamTerrain(glm::vec3 newCamPos);
-		void calculateBoundingBoxes(glm::vec3 camPos);
-		AABB_Box getBoundingBoxOfClipmap(int index, int level);
-		bool intersectsAABB(glm::vec4& start, glm::vec4& end);
 		void streamTerrainHorizontal(glm::ivec2 old_tileIndex, glm::ivec2 old_tileStart, glm::ivec2 old_border, glm::ivec2 new_tileIndex, glm::ivec2 new_tileStart, glm::ivec2 new_border, glm::ivec2 tileDelta, int level);
 		void streamTerrainVertical(glm::ivec2 old_tileIndex, glm::ivec2 old_tileStart, glm::ivec2 old_border, glm::ivec2 new_tileIndex, glm::ivec2 new_tileStart, glm::ivec2 new_border, glm::ivec2 tileDelta, int level);
+		void writeHeightDataToGPUBuffer(glm::ivec2 index, glm::ivec2 tileStart, int texWidth, unsigned char* heightMap, int level);
+		void loadHeightmapAtLevel(int level, glm::vec3 camPos, unsigned char* heightData);
 		void updateHeightMapTextureArrayPartial(int level, glm::ivec2 size, glm::ivec2 position, unsigned char* heights);
-		void deleteHeightmapArray(unsigned char** heightmapArray);
-		void createElevationMapTextureArray(unsigned char** heightmapArray);
+		void calculateBoundingBoxes(glm::vec3 camPos);
+		AABB_Box getBlockBoundingBox(int index, int level);
+		bool intersectsAABB(glm::vec4& start, glm::vec4& end);
 		glm::ivec2 getClipmapPosition(int level, glm::vec3& camPos);
 		glm::ivec2 getTileIndex(int level, glm::vec3& camPos);
-		unsigned char** createMipmaps(unsigned char* heights, int size, int totalLevel);
-		void loadTextures();
-		unsigned char* resizeHeightmap(unsigned char* heightmap, int size);
-		void createHeightmapStack(unsigned char** heightMapList, int width);
-		void createLowResolutionHeightmapStack();
-		void writeHeightDataToGPUBuffer(glm::ivec2 index, glm::ivec2 tileStart, int texWidth, unsigned char* heightMap, int level);
 	};
 }
