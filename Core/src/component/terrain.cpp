@@ -47,12 +47,16 @@ namespace Core {
 		delete[] interiorTrimPositions;
 		delete[] outerDegeneratePositions;
 		delete[] rotAmounts;
-
+		delete[] blockAABBs;
 		delete[] clipmapStartIndices;
 
 		for (int i = 0; i < CLIPMAP_LEVEL; i++)
 			delete[] heightmapStack[i];
 		delete[] heightmapStack;
+
+		for (int i = 0; i < CLIPMAP_LEVEL; i++)
+			delete[] lowResolustionHeightmapStack[i];
+		delete[] lowResolustionHeightmapStack;
 	}
 
 	void Terrain::start() {
@@ -67,7 +71,8 @@ namespace Core {
 
 		unsigned char* heightmap = Terrain::resizeHeightmap(data, w);
 		unsigned char** heightMapList = Terrain::createMipmaps(heightmap, w * MEM_TILE_ONE_SIDE, CLIPMAP_LEVEL);
-		Terrain::createHeightmapStack(heightMapList, w * MEM_TILE_ONE_SIDE, CLIPMAP_LEVEL);
+		Terrain::createHeightmapStack(heightMapList, w * MEM_TILE_ONE_SIDE);
+		Terrain::createLowResolutionHeightmapStack();
 
 		blockPositions = new glm::vec2[12 * CLIPMAP_LEVEL + 4];
 		ringFixUpPositions = new glm::vec2[2 * CLIPMAP_LEVEL + 2];
@@ -75,6 +80,7 @@ namespace Core {
 		interiorTrimPositions = new glm::vec2[CLIPMAP_LEVEL];
 		outerDegeneratePositions = new glm::vec2[4 * CLIPMAP_LEVEL];
 		rotAmounts = new float[CLIPMAP_LEVEL];
+		blockAABBs = new AABB_Box[12 * CLIPMAP_LEVEL + 4];
 
 		Terrain::generateTerrainClipmapsVertexArrays();
 		Terrain::initShaders("resources/shaders/terrain/terrain.vert", "resources/shaders/terrain/terrain.frag");
@@ -82,6 +88,13 @@ namespace Core {
 		Terrain::loadTerrainHeightmapOnInit(cameraPosition, CLIPMAP_LEVEL);
 		Terrain::calculateBlockPositions(cameraPosition);
 		Terrain::loadTextures();
+
+		// ayri bir fonksiyona ?
+		for (int i = 0; i < CLIPMAP_LEVEL; i++)
+			for (int j = 0; j < 12; j++)
+				blockAABBs[12 * i + j] = Terrain::getBoundingBoxOfClipmap(i * 12 + j, i);
+		for (int i = 0; i < 4; i++)
+			blockAABBs[12 * CLIPMAP_LEVEL + i] = Terrain::getBoundingBoxOfClipmap(12 * CLIPMAP_LEVEL + i, 0);
 	}
 
 	void Terrain::initShaders(const char* vertexShader, const char* fragShader) {
@@ -160,12 +173,15 @@ namespace Core {
 
 	/*
 	* Any updates because of the camera movement. Nested grids positions, textures updates...
+	* TODO : make a basic job system
 	*/
 	void Terrain::update(float dt) {
 
 		glm::vec3 camPosition = glm::clamp(CoreContext::instance->scene->cameraInfo.camPos, glm::vec3(8193, 0, 8193), glm::vec3(12287, 0, 12287));
 		Terrain::calculateBlockPositions(camPosition);
+		Terrain::calculateBoundingBoxes(camPosition);
 		Terrain::streamTerrain(camPosition);
+		cameraPosition = camPosition;
 	}
 
 	/*
@@ -332,18 +348,18 @@ namespace Core {
 
 				glm::vec4 startInWorldSpace;
 				glm::vec4 endInWorldSpace;
-				//AABB_Box aabb = blockAABBs[i * 12 + j];
-				//startInWorldSpace = aabb.start;
-				//endInWorldSpace = aabb.end;
+				AABB_Box aabb = blockAABBs[i * 12 + j];
+				startInWorldSpace = aabb.start;
+				endInWorldSpace = aabb.end;
 
-				//if (camera->intersectsAABB(startInWorldSpace, endInWorldSpace)) {
-				TerrainVertexAttribs attribs;
-				attribs.level = i;
-				attribs.model = glm::mat4(1);
-				attribs.position = glm::vec2(blockPositions[i * 12 + j].x, blockPositions[i * 12 + j].y);
-				attribs.color = BLOCK_COLOR;
-				instanceArray.push_back(attribs);
-				//}
+				if (Terrain::intersectsAABB(startInWorldSpace, endInWorldSpace)) {
+					TerrainVertexAttribs attribs;
+					attribs.level = i;
+					attribs.model = glm::mat4(1);
+					attribs.position = glm::vec2(blockPositions[i * 12 + j].x, blockPositions[i * 12 + j].y);
+					attribs.color = BLOCK_COLOR;
+					instanceArray.push_back(attribs);
+				}
 			}
 		}
 
@@ -351,18 +367,18 @@ namespace Core {
 
 			glm::vec4 startInWorldSpace;
 			glm::vec4 endInWorldSpace;
-			//AABB_Box aabb = blockAABBs[CLIPMAP_LEVEL * 12 + i];
-			//startInWorldSpace = aabb.start;
-			//endInWorldSpace = aabb.end;
+			AABB_Box aabb = blockAABBs[CLIPMAP_LEVEL * 12 + i];
+			startInWorldSpace = aabb.start;
+			endInWorldSpace = aabb.end;
 
-			//if (camera->intersectsAABB(startInWorldSpace, endInWorldSpace)) {
-			TerrainVertexAttribs attribs;
-			attribs.level = 0;
-			attribs.model = glm::mat4(1);
-			attribs.position = glm::vec2(blockPositions[CLIPMAP_LEVEL * 12 + i].x, blockPositions[CLIPMAP_LEVEL * 12 + i].y);
-			attribs.color = BLOCK_COLOR;
-			instanceArray.push_back(attribs);
-			//}
+			if (Terrain::intersectsAABB(startInWorldSpace, endInWorldSpace)) {
+				TerrainVertexAttribs attribs;
+				attribs.level = 0;
+				attribs.model = glm::mat4(1);
+				attribs.position = glm::vec2(blockPositions[CLIPMAP_LEVEL * 12 + i].x, blockPositions[CLIPMAP_LEVEL * 12 + i].y);
+				attribs.color = BLOCK_COLOR;
+				instanceArray.push_back(attribs);
+			}
 		}
 
 		if (instanceArray.size()) {
@@ -477,6 +493,33 @@ namespace Core {
 		attribs.color = SMALL_SQUARE_COLOR;
 		instanceArray.push_back(attribs);
 		Terrain::drawElementsInstanced(smallSquareVAO, instanceArray, smallSquareIndiceCount);
+
+		if (showBounds) {
+			for (int i = 0; i < CLIPMAP_LEVEL; i++) {
+
+				for (int j = 0; j < 12; j++) {
+
+					AABB_Box aabb = blockAABBs[i * 12 + j];
+					glm::vec3 pos = (aabb.start + aabb.end) * 0.5f;
+					glm::vec3 scale = aabb.end - aabb.start;
+					glm::mat4 model = glm::translate(glm::mat4(1), pos) * glm::scale(glm::mat4(1), scale);
+					glm::mat4 PVM = PV * model;
+					glm::vec3 color = glm::vec3(1, 0.3, 0.5);
+					CoreContext::instance->renderer->drawBoundingBoxVAO(PVM, color);
+				}
+			}
+
+			for (int i = 0; i < 4; i++) {
+
+				AABB_Box aabb = blockAABBs[CLIPMAP_LEVEL * 12 + i];
+				glm::vec3 pos = (aabb.start + aabb.end) * 0.5f;
+				glm::vec3 scale = aabb.end - aabb.start;
+				glm::mat4 model = glm::translate(glm::mat4(1), pos) * glm::scale(glm::mat4(1), scale);
+				glm::mat4 PVM = PV * model;
+				glm::vec3 color = glm::vec3(1, 0.3, 0.5);
+				CoreContext::instance->renderer->drawBoundingBoxVAO(PVM, color);
+			}
+		}
 	}
 
 	/*
@@ -528,9 +571,6 @@ namespace Core {
 	*/
 	void Terrain::calculateBlockPositions(glm::vec3 camPosition) {
 
-		float fake = 1000000;
-		glm::vec3 fakeDisplacement = glm::vec3(fake, 0, fake);
-		glm::vec3 camPos = camPosition + fakeDisplacement;
 		int patchWidth = 2;
 
 		for (int i = 0; i < CLIPMAP_LEVEL; i++) {
@@ -551,8 +591,8 @@ namespace Core {
 			// Block at level 2: 0, 0, 0, 0, 0, 0, 0, 0, 8, 8, 8  ...
 
 			float requiredCameraDisplacement = patchWidth * (1 << i);
-			float posX = (int)(camPos.x / requiredCameraDisplacement) * requiredCameraDisplacement;
-			float posZ = (int)(camPos.z / requiredCameraDisplacement) * requiredCameraDisplacement;
+			float posX = (int)(camPosition.x / requiredCameraDisplacement) * requiredCameraDisplacement;
+			float posZ = (int)(camPosition.z / requiredCameraDisplacement) * requiredCameraDisplacement;
 
 			float patchTranslation = (1 << i) * CLIPMAP_RESOLUTION;
 			float patchOffset = 1 << i;
@@ -571,7 +611,7 @@ namespace Core {
 			*/
 
 			// 0
-			glm::vec2 position(patchTranslation - fake + posX, patchTranslation - fake + posZ);
+			glm::vec2 position(patchTranslation + posX, patchTranslation + posZ);
 			position.x += patchOffset;
 			position.y += patchOffset;
 			blockPositions[i * 12 + 0] = position;
@@ -635,11 +675,11 @@ namespace Core {
 			*/
 
 			// 0
-			position = glm::vec2(-fake + posX, patchTranslation + patchOffset - fake + posZ);
+			position = glm::vec2(+posX, patchTranslation + patchOffset + posZ);
 			ringFixUpPositions[i * 2 + 0] = position;
 
 			// 2
-			position = glm::vec2(-fake + posX, (patchOffset - patchTranslation) * 2 - fake + posZ);
+			position = glm::vec2(+posX, (patchOffset - patchTranslation) * 2 + posZ);
 			ringFixUpPositions[i * 2 + 1] = position;
 
 			// RING FIX-UP HORIZONTAL
@@ -649,16 +689,16 @@ namespace Core {
 			*/
 
 			// 0
-			position = glm::vec2(-fake + posX + patchTranslation + patchOffset, - fake + posZ);
+			position = glm::vec2(+posX + patchTranslation + patchOffset, +posZ);
 			ringFixUpVerticalPositions[i * 2 + 0] = position;
 
 			// 1
-			position = glm::vec2(-fake + posX - patchTranslation * 2 + patchOffset * 2, -fake + posZ);
+			position = glm::vec2(+posX - patchTranslation * 2 + patchOffset * 2, +posZ);
 			ringFixUpVerticalPositions[i * 2 + 1] = position;
 
 			// INTERIOR TRIM
 
-			position = glm::vec2(patchOffset * 2 * (1 - rotX) - fake + posX, patchOffset * 2 * (1 - rotZ) - fake + posZ);
+			position = glm::vec2(patchOffset * 2 * (1 - rotX) + posX, patchOffset * 2 * (1 - rotZ) + posZ);
 			interiorTrimPositions[i] = position;
 
 			if (rotX == 0 && rotZ == 0)
@@ -673,25 +713,25 @@ namespace Core {
 			// OUTER DEGENERATE
 
 			// bottom (0) 
-			position = glm::vec2((patchOffset - patchTranslation) * 2 - fake + posX, (patchOffset - patchTranslation) * 2 - fake + posZ);
+			position = glm::vec2((patchOffset - patchTranslation) * 2 + posX, (patchOffset - patchTranslation) * 2 + posZ);
 			outerDegeneratePositions[i * 4 + 0] = position;
 
 			// top (1)
-			position = glm::vec2((patchOffset - patchTranslation) * 2 - fake + posX, (patchTranslation) * 2 - fake + posZ);
+			position = glm::vec2((patchOffset - patchTranslation) * 2 + posX, (patchTranslation) * 2 + posZ);
 			outerDegeneratePositions[i * 4 + 1] = position;
 
 			// right (2)
-			position = glm::vec2((patchOffset - patchTranslation) * 2 - fake + posX, (patchOffset - patchTranslation) * 2 - fake + posZ);
+			position = glm::vec2((patchOffset - patchTranslation) * 2 + posX, (patchOffset - patchTranslation) * 2 + posZ);
 			outerDegeneratePositions[i * 4 + 2] = position;
 
 			// left (3)
-			position = glm::vec2((patchTranslation) * 2 - fake + posX, (patchOffset - patchTranslation) * 2 - fake + posZ);
+			position = glm::vec2((patchTranslation) * 2 + posX, (patchOffset - patchTranslation) * 2 + posZ);
 			outerDegeneratePositions[i * 4 + 3] = position;
 		}
 
-		float posX = (int)(camPos.x / 2) * 2;
-		float posZ = (int)(camPos.z / 2) * 2;
-		glm::vec2 position(2 - fakeDisplacement.x + posX, 2 - fakeDisplacement.z + posZ);
+		float posX = (int)(camPosition.x / 2) * 2;
+		float posZ = (int)(camPosition.z / 2) * 2;
+		glm::vec2 position(2 + posX, 2 + posZ);
 
 		// 0
 		blockPositions[CLIPMAP_LEVEL * 12 + 0] = position;
@@ -710,24 +750,24 @@ namespace Core {
 
 		//
 		//0
-		position = glm::vec2(0 - fakeDisplacement.x + posX, 2 - fakeDisplacement.z + posZ);
+		position = glm::vec2(0 + posX, 2 + posZ);
 		ringFixUpPositions[CLIPMAP_LEVEL * 2 + 0] = position;
 
 		// 2
-		position = glm::vec2(0 - fakeDisplacement.x + posX, 1 - CLIPMAP_RESOLUTION - fakeDisplacement.z + posZ);
+		position = glm::vec2(0 + posX, 1 - CLIPMAP_RESOLUTION + posZ);
 		ringFixUpPositions[CLIPMAP_LEVEL * 2 + 1] = position;
 
 		//
 		//0
-		position = glm::vec2(0 - fakeDisplacement.x + posX + 2, - fakeDisplacement.z + posZ);
+		position = glm::vec2(0 + posX + 2, +posZ);
 		ringFixUpVerticalPositions[CLIPMAP_LEVEL * 2 + 0] = position;
 
 		// 2
-		position = glm::vec2(1 - fakeDisplacement.x + posX - CLIPMAP_RESOLUTION, -fakeDisplacement.z + posZ);
+		position = glm::vec2(1 + posX - CLIPMAP_RESOLUTION, +posZ);
 		ringFixUpVerticalPositions[CLIPMAP_LEVEL * 2 + 1] = position;
 
 		//
-		smallSquarePosition = glm::vec2(0 - fakeDisplacement.x + posX, 0 - fakeDisplacement.z + posZ);
+		smallSquarePosition = glm::vec2(0 + posX, 0 + posZ);
 	}
 
 	void Terrain::streamTerrain(glm::vec3 newCamPos) {
@@ -763,8 +803,121 @@ namespace Core {
 			tileDelta.x = 0;
 			Terrain::streamTerrainVertical(old_tileIndex, old_tileStart, old_border, new_tileIndex, new_tileStart, new_border, tileDelta, level);
 		}
+	}
 
-		cameraPosition = newCamPos;
+	void Terrain::calculateBoundingBoxes(glm::vec3 camPos) {
+
+		for (int level = 0; level < CLIPMAP_LEVEL; level++) {
+
+			glm::ivec2 old_clipmapPos = Terrain::getClipmapPosition(level, cameraPosition);
+			glm::ivec2 new_clipmapPos = Terrain::getClipmapPosition(level, camPos);
+
+			if (old_clipmapPos.x != new_clipmapPos.x || old_clipmapPos.y != new_clipmapPos.y) {
+				for (int i = 0; i < 12; i++)
+					blockAABBs[level * 12 + i] = Terrain::getBoundingBoxOfClipmap(level * 12 + i, level);
+			}
+		}
+
+		glm::ivec2 old_clipmapPos = Terrain::getClipmapPosition(0, cameraPosition);
+		glm::ivec2 new_clipmapPos = Terrain::getClipmapPosition(0, camPos);
+
+		if (old_clipmapPos.x != new_clipmapPos.x || old_clipmapPos.y != new_clipmapPos.y) {
+			for (int i = 0; i < 4; i++)
+				blockAABBs[CLIPMAP_LEVEL * 12 + i] = Terrain::getBoundingBoxOfClipmap(CLIPMAP_LEVEL * 12 + i, 0);
+		}
+	}
+
+	AABB_Box Terrain::getBoundingBoxOfClipmap(int index, int level) {
+
+		glm::ivec2 blockPositionInWorldSpace = blockPositions[index];
+
+		int startPos = clipmapStartIndices[level].x;
+		int endPos = clipmapStartIndices[level].y;
+		int startPosWorldSpace = (startPos * TILE_SIZE) << level;
+
+		int sizeInHeightmap = (endPos - startPos) * TILE_SIZE;
+		int lowResolutionHeightmapTextureSize = sizeInHeightmap >> MIP_STACK_DIVISOR_POWER;
+
+		glm::ivec2 startPosInHeightmapWorldSpace = glm::ivec2(startPosWorldSpace, startPosWorldSpace);
+		glm::ivec2 offsetWorldSpace = blockPositionInWorldSpace - startPosInHeightmapWorldSpace;
+
+		// this is where clipmap position is equivalent in low resolution heightmap
+		glm::ivec2 offsetInLowResolutionHeightmap = (offsetWorldSpace >> level) >> MIP_STACK_DIVISOR_POWER;
+		
+		int blockSizeInLowResolutionHeightmapStack = CLIPMAP_RESOLUTION >> MIP_STACK_DIVISOR_POWER;
+		int blockSizeInWorldSpace = (CLIPMAP_RESOLUTION - 1) << level;
+
+		// size value of clipmap in low resolution heightmap
+		glm::ivec2 sizeInLowResolutionHeightmapStack = glm::ivec2(blockSizeInLowResolutionHeightmapStack, blockSizeInLowResolutionHeightmapStack);
+
+		unsigned char min = 255;
+		unsigned char max = 0;
+
+		int startX = offsetInLowResolutionHeightmap.x;
+		int endX = startX + sizeInLowResolutionHeightmapStack.x;
+		int startZ = offsetInLowResolutionHeightmap.y;
+		int endZ = startZ + sizeInLowResolutionHeightmapStack.y;
+
+		for (int i = startZ; i < endZ; i++) {
+			for (int j = startX; j < endX; j++) {
+				
+				int index = i * lowResolutionHeightmapTextureSize + j;
+				if (lowResolustionHeightmapStack[level][index] < min)
+					min = lowResolustionHeightmapStack[level][index];
+
+				if (lowResolustionHeightmapStack[level][index] > max)
+					max = lowResolustionHeightmapStack[level][index];
+			}
+		}
+
+		float margin = 1.f;
+		glm::vec4 corner0(blockPositionInWorldSpace.x - margin, min * (MAX_HEIGHT / 255.f) - margin, blockPositionInWorldSpace.y - margin, 1);
+		glm::vec4 corner1(blockPositionInWorldSpace.x + blockSizeInWorldSpace + margin, max * (MAX_HEIGHT / 255.f) + margin, blockPositionInWorldSpace.y + blockSizeInWorldSpace + margin, 1);
+
+		AABB_Box boundingBox;
+		boundingBox.start = corner0;
+		boundingBox.end = corner1;
+		return boundingBox;
+	}
+
+	// ref: https://arm-software.github.io/opengl-es-sdk-for-android/terrain.html
+	bool Terrain::intersectsAABB(glm::vec4& start, glm::vec4& end) {
+		// If all corners of an axis-aligned bounding box are on the "wrong side" (negative distance)
+		// of at least one of the frustum planes, we can safely cull the mesh.
+		glm::vec4 corners[8];
+
+		corners[0] = glm::vec4(start.x, start.y, start.z, 1);
+		corners[1] = glm::vec4(start.x, start.y, end.z, 1);
+		corners[2] = glm::vec4(start.x, end.y, start.z, 1);
+		corners[3] = glm::vec4(start.x, end.y, end.z, 1);
+		corners[4] = glm::vec4(end.x, start.y, start.z, 1);
+		corners[5] = glm::vec4(end.x, start.y, end.z, 1);
+		corners[6] = glm::vec4(end.x, end.y, start.z, 1);
+		corners[7] = glm::vec4(end.x, end.y, end.z, 1);
+
+		//for (unsigned int c = 0; c < 8; c++)
+		//{
+		//    // Require 4-dimensional coordinates for plane equations.
+		//    corners[c] = glm::vec4(aabb[c], 1.0f);
+		//}
+		for (unsigned int p = 0; p < 6; p++)
+		{
+			bool inside_plane = false;
+			for (unsigned int c = 0; c < 8; c++)
+			{
+				// If dot product > 0, we're "inside" the frustum plane,
+				// otherwise, outside.
+				glm::vec4 plane = CoreContext::instance->scene->cameraInfo.planes[p];
+				if (glm::dot(corners[c], plane) > 0.0f)
+				{
+					inside_plane = true;
+					break;
+				}
+			}
+			if (!inside_plane)
+				return false;
+		}
+		return true;
 	}
 
 	/*
@@ -1350,7 +1503,68 @@ namespace Core {
 	* Creates heightmap stack that is used by gpu. Rather than streaming from disk, we started to stream from memory.
 	* Takes input from resized image.
 	*/
-	void Terrain::createHeightmapStack(unsigned char** heightMapList, int width, int totalLevel) {
+	void Terrain::createLowResolutionHeightmapStack() {
+
+		lowResolustionHeightmapStack = new unsigned char* [CLIPMAP_LEVEL];
+
+		for (int level = 0; level < CLIPMAP_LEVEL; level++) {
+
+			int sizeInHeightmap = ((clipmapStartIndices[level].y - clipmapStartIndices[level].x) * TILE_SIZE);
+			int sizeInLowResolutionHeightmap = sizeInHeightmap >> MIP_STACK_DIVISOR_POWER;
+			lowResolustionHeightmapStack[level] = new unsigned char[sizeInLowResolutionHeightmap * sizeInLowResolutionHeightmap];
+
+			unsigned char* first = new unsigned char[sizeInHeightmap * sizeInHeightmap];
+
+			// One channel is reduced. Is this gonna be a problem ?
+			for (int i = 0; i < sizeInHeightmap; i++)
+				for (int j = 0; j < sizeInHeightmap; j++) 
+					first[i * sizeInHeightmap + j] = heightmapStack[level][(i * sizeInHeightmap + j) * 2];
+
+			int sizeIterator = sizeInHeightmap;
+			for (int iter = 0; iter < MIP_STACK_DIVISOR_POWER; iter++) {
+
+				sizeIterator >>= 1;
+				unsigned char* second = new unsigned char[sizeIterator * sizeIterator];
+
+				for (int i = 0; i < sizeIterator; i++) {
+					for (int j = 0; j < sizeIterator; j++) {
+						// c0 c1
+						// c2 c3
+						int c0 = first[(i*2 * sizeIterator*2 + j*2)];
+						int c1 = first[(i*2 * sizeIterator*2 + j*2 + 1)];
+						int c2 = first[((i*2 + 1) * sizeIterator*2 + j*2)];
+						int c3 = first[((i*2 + 1) * sizeIterator*2 + j*2 + 1)];
+
+						second[i * sizeIterator + j] = (c0 + c1 + c2 + c3) * 0.25f;
+					}
+				}
+				delete [] first;
+				first = second;
+			}
+
+			for (int i = 0; i < sizeIterator; i++)
+				for (int j = 0; j < sizeIterator; j++)
+					lowResolustionHeightmapStack[level][i * sizeIterator + j] = first[i * sizeIterator + j];
+
+			delete [] first;
+
+			//// DEBUG (SUCCESFUL)
+			//std::vector<unsigned char> in(sizeIterator * sizeIterator);
+			//for (int i = 0; i < sizeIterator * sizeIterator; i++)
+			//	in[i] = lowResolustionHeightmapStack[level][i];
+
+			//unsigned int width = sizeIterator;
+			//unsigned int height = sizeIterator;
+			//std::string imagePath = "lowresheightmapStack" + std::to_string(level) + ".png";
+			//lodepng::encode(imagePath, in, sizeIterator, sizeIterator, LodePNGColorType::LCT_GREY, 8);
+		}
+	}
+
+	/*
+	* Creates heightmap stack that is used by gpu. Rather than streaming from disk, we started to stream from memory.
+	* Takes input from resized image.
+	*/
+	void Terrain::createHeightmapStack(unsigned char** heightMapList, int width) {
 
 		heightmapStack = new unsigned char* [CLIPMAP_LEVEL];
 		clipmapStartIndices = new glm::ivec2[CLIPMAP_LEVEL];
@@ -1359,13 +1573,13 @@ namespace Core {
 
 		int res = width;
 
-		for (int level = 0; level < totalLevel; level++) {
+		for (int level = 0; level < CLIPMAP_LEVEL; level++) {
 
 			int numTiles = res / TILE_SIZE;
 			int start = (numTiles >> 1) - 2;
 			int end = ((numTiles * 3) >> 2) + 1;
 
-			clipmapStartIndices[level] = glm::ivec2(start,end);
+			clipmapStartIndices[level] = glm::ivec2(start, end);
 			int size = (end - start) * TILE_SIZE;
 			heightmapStack[level] = new unsigned char[size * size * TERRAIN_STACK_NUM_CHANNELS];
 
@@ -1382,6 +1596,7 @@ namespace Core {
 					heightmapStack[level][newCoord + 1] = heightMapList[level][baseCoord + 1];
 				}
 			}
+			res /= 2;
 
 			//// DEBUG (SUCCESFUL)
 			//std::vector<unsigned char> in(size * size * 2);
@@ -1392,8 +1607,6 @@ namespace Core {
 			//unsigned int height = size;
 			//std::string imagePath = "heightmapStack" + std::to_string(level) + ".png";
 			//lodepng::encode(imagePath, in, width, height, LodePNGColorType::LCT_GREY, 16);
-
-			res /= 2;
 		}
 	}
 }

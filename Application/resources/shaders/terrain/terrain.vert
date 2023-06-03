@@ -47,6 +47,7 @@ void main(void)
 
     float height = (heightSample.r * 255 * 256 + heightSample.g * 255) * (MAX_HEIGHT / (256 * 256 - 1));
     pos.y = height;
+    //pos.y = 0;
 
     float h0 = (index0.r * 255 * 256 + index0.g * 255) * (MAX_HEIGHT / (256 * 256 - 1));
     float h1 = (index1.r * 255 * 256 + index1.g * 255) * (MAX_HEIGHT / (256 * 256 - 1));

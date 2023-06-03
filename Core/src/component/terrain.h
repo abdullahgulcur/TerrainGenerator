@@ -20,8 +20,7 @@
 #define TILE_SIZE 256
 #define MEM_TILE_ONE_SIDE 4
 #define TERRAIN_STACK_NUM_CHANNELS 2
-#define MIP_STACK_DIVISOR_RATIO 8
-#define MIP_STACK_SIZE (TILE_SIZE / MIP_STACK_DIVISOR_RATIO) * MEM_TILE_ONE_SIDE 
+#define MIP_STACK_DIVISOR_POWER 3
 #define TERRAIN_TEXTURE_SIZE 512
 #define MAX_HEIGHT 180
 
@@ -39,9 +38,8 @@ namespace Core {
 
 	/// <summary>
 	///  TODO:
-	///  orientation culling --> View frustum culling
-	///  faster file read for heightmaps (robust library)
 	///  less data
+	///  bugs: getClipmap pos and grid poses are relatively not equal when camera goes negative direction. Importance: less
 	/// </summary>
 
 	class CoreContext;
@@ -70,12 +68,16 @@ namespace Core {
 		float* rotAmounts;
 		glm::vec2 smallSquarePosition;
 
+		AABB_Box* blockAABBs;
+
 		unsigned int programID;
 		unsigned int elevationMapTexture;
 
+		/* Solution textures to get rid of tiling effect of the terrain */
 		unsigned int macroTexture;
 		unsigned int noiseTexture;
 
+		/* Terrain albedo textures */
 		unsigned int albedo0;
 		unsigned int albedo1;
 		unsigned int albedo2;
@@ -84,6 +86,7 @@ namespace Core {
 		unsigned int albedo5;
 		unsigned int albedo6;
 
+		/* Terrain normal textures */
 		unsigned int normal0;
 		unsigned int normal1;
 		unsigned int normal2;
@@ -111,8 +114,18 @@ namespace Core {
 		std::vector<unsigned int> interiorTrimIndices;
 		unsigned int interiorTrimVAO;
 
+		/*
+		* Heightmap stack is used by program while running to get 
+		* terrain height values to give shape of the terrain
+		*/
 		unsigned char** heightmapStack;
 		glm::ivec2* clipmapStartIndices;
+
+		/*
+		* Low resolution heightmap stack is for calculating bounding box
+		* of each blocks that is used by frustum culling algorithm.
+		*/
+		unsigned char** lowResolustionHeightmapStack;
 
 		// in ui 
 		glm::vec3 lightDir;
@@ -190,6 +203,8 @@ namespace Core {
 		float heightBias1 = 135;
 		float heightSharpness1 = 5;
 
+		bool showBounds = false;
+
 		Terrain();
 		~Terrain();
 		void start();
@@ -202,6 +217,9 @@ namespace Core {
 		void loadTerrainHeightmapOnInit(glm::vec3 camPos, int clipmapLevel);
 		void loadHeightmapAtLevel(int level, glm::vec3 camPos, unsigned char* heightData);
 		void streamTerrain(glm::vec3 newCamPos);
+		void calculateBoundingBoxes(glm::vec3 camPos);
+		AABB_Box getBoundingBoxOfClipmap(int index, int level);
+		bool intersectsAABB(glm::vec4& start, glm::vec4& end);
 		void streamTerrainHorizontal(glm::ivec2 old_tileIndex, glm::ivec2 old_tileStart, glm::ivec2 old_border, glm::ivec2 new_tileIndex, glm::ivec2 new_tileStart, glm::ivec2 new_border, glm::ivec2 tileDelta, int level);
 		void streamTerrainVertical(glm::ivec2 old_tileIndex, glm::ivec2 old_tileStart, glm::ivec2 old_border, glm::ivec2 new_tileIndex, glm::ivec2 new_tileStart, glm::ivec2 new_border, glm::ivec2 tileDelta, int level);
 		void updateHeightMapTextureArrayPartial(int level, glm::ivec2 size, glm::ivec2 position, unsigned char* heights);
@@ -212,7 +230,8 @@ namespace Core {
 		unsigned char** createMipmaps(unsigned char* heights, int size, int totalLevel);
 		void loadTextures();
 		unsigned char* resizeHeightmap(unsigned char* heightmap, int size);
-		void createHeightmapStack(unsigned char** heightMapList, int width, int totalLevel);
+		void createHeightmapStack(unsigned char** heightMapList, int width);
+		void createLowResolutionHeightmapStack();
 		void writeHeightDataToGPUBuffer(glm::ivec2 index, glm::ivec2 tileStart, int texWidth, unsigned char* heightMap, int level);
 	};
 }

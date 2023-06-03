@@ -2,19 +2,25 @@
 #include "renderer.h"
 #include "GL/glew.h"
 #include "corecontext.h"
+#include "shader.h"
 #include "glewcontext.h"
 #include "component/terrain.h"
+
+using namespace std::chrono;
 
 namespace Core {
 
 	void Renderer::init() {
 
-		GlewContext* glew = CoreContext::instance->glewContext;
-		backgroundShaderProgramId = glew->loadShaders("resources/shaders/background.vert", "resources/shaders/background.frag");
-		defaultPbrShaderProgramId = glew->loadShaders("resources/shaders/pbr.vert", "resources/shaders/pbr.frag");
-		alphaBlendedPbrShaderProgramId = glew->loadShaders("resources/shaders/pbr_alpha_clipped.vert", "resources/shaders/pbr_alpha_clipped.frag");
+		backgroundShaderProgramId = Shader::loadShaders("resources/shaders/background.vert", "resources/shaders/background.frag");
+		defaultPbrShaderProgramId = Shader::loadShaders("resources/shaders/pbr.vert", "resources/shaders/pbr.frag");
+		alphaBlendedPbrShaderProgramId = Shader::loadShaders("resources/shaders/pbr_alpha_clipped.vert", "resources/shaders/pbr_alpha_clipped.frag");
+		lineShaderProgramId = Shader::loadShaders("resources/shaders/line.vert", "resources/shaders/line.frag");
 
 		Renderer::createEnvironmentCubeVAO();
+
+		// EDITOR
+		Renderer::createBoundingBoxVAO();
 	}
 
 	void Renderer::update(float dt) {
@@ -32,7 +38,13 @@ namespace Core {
 
 		if (Terrain* terrain = scene->terrain) {
 			//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+
+			auto start = high_resolution_clock::now();
 			terrain->onDraw();
+			auto stop = high_resolution_clock::now();
+			unsigned int duration = duration_cast<microseconds>(stop - start).count();
+			terrainRenderTotalTime += duration;
 		}
 
         // render skybox (render as last to prevent overdraw)
@@ -67,6 +79,9 @@ namespace Core {
 #ifdef EDITOR_MODE
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 #endif	
+
+		frameCounter++;
+		terrainRenderDuration = terrainRenderTotalTime / frameCounter;
 	}
 
 	void Renderer::createEnvironmentCubeVAO() {
@@ -133,5 +148,58 @@ namespace Core {
 		glBindVertexArray(0);
 	}
 
+	void Renderer::createBoundingBoxVAO() {
 
+		float vertices[] = {
+
+			0.5f,	0.5f,	-0.5f,   
+			-0.5f,	0.5f,	-0.5f,
+			-0.5f,	0.5f,	-0.5f,
+			-0.5f,	-0.5f,	-0.5f,
+			-0.5f,	-0.5f,	-0.5f,
+			0.5f,	-0.5f,	-0.5f,
+			0.5f,	-0.5f,	-0.5f,
+			0.5f,	0.5f,	-0.5f,
+
+			0.5f,	0.5f,	0.5f,
+			-0.5f,	0.5f,	0.5f,
+			-0.5f,	0.5f,	0.5f,
+			-0.5f,	-0.5f,	0.5f,
+			-0.5f,	-0.5f,	0.5f,
+			0.5f,	-0.5f,	0.5f,
+			0.5f,	-0.5f,	0.5f,
+			0.5f,	0.5f,	0.5f,
+
+			0.5f,	0.5f,	-0.5f,
+			0.5f,	0.5f,	0.5f,
+			-0.5f,	0.5f,	-0.5f,
+			-0.5f,	0.5f,	0.5f,
+			-0.5f,	-0.5f,	-0.5f,
+			-0.5f,	-0.5f,	0.5f,
+			0.5f,	-0.5f,	-0.5f,
+			0.5f,	-0.5f,	0.5f,
+		};
+
+		glGenVertexArrays(1, &boundingBoxVAO);
+		unsigned int boundingBoxVBO;
+		glGenBuffers(1, &boundingBoxVBO);
+		glBindBuffer(GL_ARRAY_BUFFER, boundingBoxVBO);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+		glBindVertexArray(boundingBoxVAO);
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+		glBindVertexArray(0);
+	}
+
+	void Renderer::drawBoundingBoxVAO(glm::mat4& PVM, glm::vec3& color) {
+
+		glUseProgram(lineShaderProgramId);
+		glUniformMatrix4fv(glGetUniformLocation(lineShaderProgramId, "PVM"), 1, 0, &PVM[0][0]);
+		glUniform3fv(glGetUniformLocation(lineShaderProgramId, "color"), 1, &color[0]);
+
+		glBindVertexArray(boundingBoxVAO);
+		glDrawArrays(GL_LINES, 0, 24);
+		glBindVertexArray(0);
+	}
 }

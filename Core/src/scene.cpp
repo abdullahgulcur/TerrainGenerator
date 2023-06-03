@@ -302,6 +302,10 @@ namespace Core {
 		heightNode->append_attribute(doc.allocate_attribute("heightSharpness1", doc.allocate_string(std::to_string(terrain->heightSharpness1).c_str())));
 		terrainNode->append_node(heightNode);
 
+		rapidxml::xml_node<>* debugNode = doc.allocate_node(rapidxml::node_element, "Debug");
+		debugNode->append_attribute(doc.allocate_attribute("showBounds", doc.allocate_string(std::to_string((int)terrain->showBounds).c_str())));
+		terrainNode->append_node(debugNode);
+
 		return true;
 	}
 
@@ -391,6 +395,9 @@ namespace Core {
 		terrain->heightSharpness0 = atof(heightNode->first_attribute("heightSharpness0")->value());
 		terrain->heightBias1 = atof(heightNode->first_attribute("heightBias1")->value());
 		terrain->heightSharpness1 = atof(heightNode->first_attribute("heightSharpness1")->value());
+
+		rapidxml::xml_node<>* debugNode = terrainNode->first_node("Debug");
+		terrain->showBounds = (bool)atoi(debugNode->first_attribute("showBounds")->value());
 
 		return terrain;
 	}

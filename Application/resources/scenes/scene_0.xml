@@ -12,6 +12,7 @@
 		<Color1 color_r="0.838889" color_g="0.838889" color_b="0.838889"/>
 		<Slope slopeSharpness0="0.096000" slopeSharpness1="0.061000" slopeBias0="0.886000" slopeBias1="0.863000"/>
 		<Height heightBias0="2.300000" heightSharpness0="1.500000" heightBias1="114.699997" heightSharpness1="4.770000"/>
+		<Debug showBounds="0"/>
 	</Terrain>
 </Scene>
 

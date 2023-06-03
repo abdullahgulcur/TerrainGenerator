@@ -680,6 +680,17 @@ namespace Editor {
 			ImGui::SameLine(); ImGui::TextColored(DEFAULT_TEXT_COLOR, "Soft"); ImGui::PushItemWidth(itemWidth);
 			ImGui::SameLine(); ImGui::DragFloat("##heightSharpness1", &terrain->heightSharpness1, 0.01f, 0.0f, 100.0f, "%.2f");
 
+			ImGui::Separator();
+
+			ImGui::TextColored(DEFAULT_TEXT_COLOR, "Show Bounds"); ImGui::SameLine();
+			ImGui::Checkbox("##showBounds", &terrain->showBounds);
+
+			glm::vec3 camPos = CoreContext::instance->scene->cameraInfo.camPos;
+			std::string camPosStr = "Camera Pos X: " + std::to_string(camPos.x) + " Y: " + std::to_string(camPos.y) + " Z: " + std::to_string(camPos.z);
+			ImGui::TextColored(DEFAULT_TEXT_COLOR, &camPosStr[0]);
+			std::string terrainRenderDurationStr = "Terrain render time (microseconds): " + std::to_string(CoreContext::instance->renderer->terrainRenderDuration);
+			ImGui::TextColored(DEFAULT_TEXT_COLOR, &terrainRenderDurationStr[0]);
+
 			ImGui::TreePop();
 		}
 
