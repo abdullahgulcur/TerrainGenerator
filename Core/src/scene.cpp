@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "scene.h"
+#include "shader.h"
 #include "corecontext.h"
 #include "component/terrain.h"
 
@@ -17,23 +18,39 @@ namespace Core {
 
 	void Scene::start() {
 
-		filterFramebufferProgramID = CoreContext::instance->glewContext->loadShaders("resources/shaders/framebuffer/framebuffer.vert",
+		Scene::initFramebuffers();
+		cubemap = CoreContext::instance->fileSystem->cubemaps.at("hilly_terrain_01_puresky_4k");
+		Scene::loadScene(Scene::getActiveScenePath());
+
+		// EDITOR ONLY
+		activeSceneIndex = Scene::getActiveSceneIndex();
+	}
+
+	void Scene::update(float dt) {
+
+		if (terrain != NULL)
+			terrain->update(dt);
+	}
+
+	void Scene::initFramebuffers() {
+
+		filterFramebufferProgramID = Shader::loadShaders("resources/shaders/framebuffer/framebuffer.vert",
 			"resources/shaders/framebuffer/framebuffer_filter.frag");
-		framebufferProgramID = CoreContext::instance->glewContext->loadShaders("resources/shaders/framebuffer/framebuffer.vert",
+		framebufferProgramID = Shader::loadShaders("resources/shaders/framebuffer/framebuffer.vert",
 			"resources/shaders/framebuffer/framebuffer.frag");
 
 		glUniform1i(glGetUniformLocation(filterFramebufferProgramID, "screenTexture"), 0);
 		glUniform1i(glGetUniformLocation(framebufferProgramID, "screenTexture"), 0);
 
 		float screenQuadVertices[] = {
-		   // positions   // texCoords
-		   -1.0f,  1.0f,  0.0f, 1.0f,
-		   -1.0f, -1.0f,  0.0f, 0.0f,
-			1.0f, -1.0f,  1.0f, 0.0f,
+			// positions   // texCoords
+			-1.0f,  1.0f,  0.0f, 1.0f,
+			-1.0f, -1.0f,  0.0f, 0.0f,
+			 1.0f, -1.0f,  1.0f, 0.0f,
 
-		   -1.0f,  1.0f,  0.0f, 1.0f,
-			1.0f, -1.0f,  1.0f, 0.0f,
-			1.0f,  1.0f,  1.0f, 1.0f
+			-1.0f,  1.0f,  0.0f, 1.0f,
+			 1.0f, -1.0f,  1.0f, 0.0f,
+			 1.0f,  1.0f,  1.0f, 1.0f
 		};
 		// screen quad VAO
 		unsigned int screenQuadVBO;
@@ -48,19 +65,6 @@ namespace Core {
 		glVertexAttribPointer(1, 2, GL_FLOAT, 0, 4 * sizeof(float), (void*)(2 * sizeof(float)));
 
 		Scene::setFrameBuffer(1920, 1080);
-
-		cubemap = CoreContext::instance->fileSystem->cubemaps.at("hilly_terrain_01_puresky_4k");
-
-		Scene::loadScene(Scene::getActiveScenePath());
-
-		// EDITOR ONLY
-		activeSceneIndex = Scene::getActiveSceneIndex();
-	}
-
-	void Scene::update(float dt) {
-
-		if (terrain != NULL)
-			terrain->update(dt);
 	}
 
 	// EDITOR ONLY
@@ -250,6 +254,10 @@ namespace Core {
 		colorScaleNode->append_attribute(doc.allocate_attribute("scale_color6_dist1", doc.allocate_string(std::to_string(terrain->scale_color6_dist1).c_str())));
 		colorScaleNode->append_attribute(doc.allocate_attribute("scale_color7_dist0", doc.allocate_string(std::to_string(terrain->scale_color7_dist0).c_str())));
 		colorScaleNode->append_attribute(doc.allocate_attribute("scale_color7_dist1", doc.allocate_string(std::to_string(terrain->scale_color7_dist1).c_str())));
+		colorScaleNode->append_attribute(doc.allocate_attribute("scale_color8_dist0", doc.allocate_string(std::to_string(terrain->scale_color8_dist0).c_str())));
+		colorScaleNode->append_attribute(doc.allocate_attribute("scale_color8_dist1", doc.allocate_string(std::to_string(terrain->scale_color8_dist1).c_str())));
+		colorScaleNode->append_attribute(doc.allocate_attribute("scale_color9_dist0", doc.allocate_string(std::to_string(terrain->scale_color9_dist0).c_str())));
+		colorScaleNode->append_attribute(doc.allocate_attribute("scale_color9_dist1", doc.allocate_string(std::to_string(terrain->scale_color9_dist1).c_str())));
 		terrainNode->append_node(colorScaleNode);
 
 		rapidxml::xml_node<>* macroNode = doc.allocate_node(rapidxml::node_element, "Macro");
@@ -274,6 +282,11 @@ namespace Core {
 		overlayNode->append_attribute(doc.allocate_attribute("overlayBlendAmount2", doc.allocate_string(std::to_string(terrain->overlayBlendAmount2).c_str())));
 		overlayNode->append_attribute(doc.allocate_attribute("overlayBlendPower2", doc.allocate_string(std::to_string(terrain->overlayBlendPower2).c_str())));
 		overlayNode->append_attribute(doc.allocate_attribute("overlayBlendOpacity2", doc.allocate_string(std::to_string(terrain->overlayBlendOpacity2).c_str())));
+		overlayNode->append_attribute(doc.allocate_attribute("overlayBlendScale3", doc.allocate_string(std::to_string(terrain->overlayBlendScale3).c_str())));
+		overlayNode->append_attribute(doc.allocate_attribute("overlayBlendAmount3", doc.allocate_string(std::to_string(terrain->overlayBlendAmount3).c_str())));
+		overlayNode->append_attribute(doc.allocate_attribute("overlayBlendPower3", doc.allocate_string(std::to_string(terrain->overlayBlendPower3).c_str())));
+		overlayNode->append_attribute(doc.allocate_attribute("overlayBlendOpacity3", doc.allocate_string(std::to_string(terrain->overlayBlendOpacity3).c_str())));
+
 		terrainNode->append_node(overlayNode);
 
 		rapidxml::xml_node<>* color0Node = doc.allocate_node(rapidxml::node_element, "Color0");
@@ -291,8 +304,10 @@ namespace Core {
 		rapidxml::xml_node<>* slopeNode = doc.allocate_node(rapidxml::node_element, "Slope");
 		slopeNode->append_attribute(doc.allocate_attribute("slopeSharpness0", doc.allocate_string(std::to_string(terrain->slopeSharpness0).c_str())));
 		slopeNode->append_attribute(doc.allocate_attribute("slopeSharpness1", doc.allocate_string(std::to_string(terrain->slopeSharpness1).c_str())));
+		slopeNode->append_attribute(doc.allocate_attribute("slopeSharpness2", doc.allocate_string(std::to_string(terrain->slopeSharpness2).c_str())));
 		slopeNode->append_attribute(doc.allocate_attribute("slopeBias0", doc.allocate_string(std::to_string(terrain->slopeBias0).c_str())));
 		slopeNode->append_attribute(doc.allocate_attribute("slopeBias1", doc.allocate_string(std::to_string(terrain->slopeBias1).c_str())));
+		slopeNode->append_attribute(doc.allocate_attribute("slopeBias2", doc.allocate_string(std::to_string(terrain->slopeBias2).c_str())));
 		terrainNode->append_node(slopeNode);
 
 		rapidxml::xml_node<>* heightNode = doc.allocate_node(rapidxml::node_element, "Height");
@@ -361,6 +376,10 @@ namespace Core {
 		terrain->scale_color6_dist1 = atof(colorScaleNode->first_attribute("scale_color6_dist1")->value());
 		terrain->scale_color7_dist0 = atof(colorScaleNode->first_attribute("scale_color7_dist0")->value());
 		terrain->scale_color7_dist1 = atof(colorScaleNode->first_attribute("scale_color7_dist1")->value());
+		terrain->scale_color8_dist0 = atof(colorScaleNode->first_attribute("scale_color8_dist0")->value());
+		terrain->scale_color8_dist1 = atof(colorScaleNode->first_attribute("scale_color8_dist1")->value());
+		terrain->scale_color9_dist0 = atof(colorScaleNode->first_attribute("scale_color9_dist0")->value());
+		terrain->scale_color9_dist1 = atof(colorScaleNode->first_attribute("scale_color9_dist1")->value());
 
 		rapidxml::xml_node<>* macroNode = terrainNode->first_node("Macro");
 		terrain->macroScale_0 = atof(macroNode->first_attribute("macroScale_0")->value());
@@ -383,12 +402,18 @@ namespace Core {
 		terrain->overlayBlendAmount2 = atof(overlayNode->first_attribute("overlayBlendAmount2")->value());
 		terrain->overlayBlendPower2 = atof(overlayNode->first_attribute("overlayBlendPower2")->value());
 		terrain->overlayBlendOpacity2 = atof(overlayNode->first_attribute("overlayBlendOpacity2")->value());
+		terrain->overlayBlendScale3 = atof(overlayNode->first_attribute("overlayBlendScale3")->value());
+		terrain->overlayBlendAmount3 = atof(overlayNode->first_attribute("overlayBlendAmount3")->value());
+		terrain->overlayBlendPower3 = atof(overlayNode->first_attribute("overlayBlendPower3")->value());
+		terrain->overlayBlendOpacity3 = atof(overlayNode->first_attribute("overlayBlendOpacity3")->value());
 
 		rapidxml::xml_node<>* slopeNode = terrainNode->first_node("Slope");
 		terrain->slopeSharpness0 = atof(slopeNode->first_attribute("slopeSharpness0")->value());
 		terrain->slopeSharpness1 = atof(slopeNode->first_attribute("slopeSharpness1")->value());
+		terrain->slopeSharpness2 = atof(slopeNode->first_attribute("slopeSharpness2")->value());
 		terrain->slopeBias0 = atof(slopeNode->first_attribute("slopeBias0")->value());
 		terrain->slopeBias1 = atof(slopeNode->first_attribute("slopeBias1")->value());
+		terrain->slopeBias2 = atof(slopeNode->first_attribute("slopeBias2")->value());
 
 		rapidxml::xml_node<>* heightNode = terrainNode->first_node("Height");
 		terrain->heightBias0 = atof(heightNode->first_attribute("heightBias0")->value());

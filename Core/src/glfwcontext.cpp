@@ -12,7 +12,7 @@ namespace Core {
 		if (!glfwInit())
 			fprintf(stderr, "Failed to initialize GLFW\n");
 
-		//glfwWindowHint(GLFW_SAMPLES, 4);
+		glfwWindowHint(GLFW_SAMPLES, 4);
 		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
 		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
 		glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
@@ -20,15 +20,14 @@ namespace Core {
 		monitor = glfwGetPrimaryMonitor();
 		mode = glfwGetVideoMode(monitor);
 
-		//GLFW_window = glfwCreateWindow(mode->width, mode->height, "Fury", monitor, NULL);
+		//GLFW_window = glfwCreateWindow(mode->width, mode->height, "TerrainEngine", monitor, NULL);
 
 #ifdef EDITOR_MODE
 		GLFW_window = glfwCreateWindow(mode->width, mode->height, "TerrainEngine", NULL, NULL);
 #else
-		//GLFW_window = glfwCreateWindow(mode->width, mode->height, "Fury", NULL, NULL); // windowed
+		//GLFW_window = glfwCreateWindow(mode->width, mode->height, "TerrainEngine", NULL, NULL); // windowed
 		GLFW_window = glfwCreateWindow(mode->width, mode->height, "TerrainEngine", monitor, NULL); // fullscreen
 #endif // EDITOR_MODE
-
 
 		glfwMaximizeWindow(GLFW_window);
 		glfwMakeContextCurrent(GLFW_window);
@@ -74,14 +73,7 @@ namespace Core {
 
 	bool GlfwContext::getOpen() {
 
-		bool open = glfwGetKey(GLFW_window, GLFW_KEY_ESCAPE) != GLFW_PRESS && glfwWindowShouldClose(GLFW_window) == 0;
-
-		if (!open) {
-
-			//core->saveLoadSystem->saveSceneCamera();
-		}
-
-		return open;
+		return glfwGetKey(GLFW_window, GLFW_KEY_ESCAPE) != GLFW_PRESS && glfwWindowShouldClose(GLFW_window) == 0;
 	}
 
 	void GlfwContext::terminateGLFW() {
@@ -115,45 +107,5 @@ namespace Core {
 	}
 
 	void GlfwContext::key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-
-		/*if (action == GLFW_PRESS) {
-			switch (key) {
-			case GLFW_KEY_W: Input::w_pressed = true; break;
-			case GLFW_KEY_A: Input::a_pressed = true; break;
-			case GLFW_KEY_S: Input::s_pressed = true; break;
-			case GLFW_KEY_D: Input::d_pressed = true; break;
-			case GLFW_KEY_SPACE: Input::space_pressed = true; break;
-			case GLFW_KEY_LEFT_SHIFT: Input::left_shift_pressed = true; break;
-			case GLFW_KEY_ENTER: Input::enter_pressed = true; break;
-			case GLFW_KEY_LEFT_CONTROL: Input::left_ctrl_pressed = true; break;
-			case GLFW_KEY_LEFT_ALT: Input::left_alt_pressed = true; break;
-			case GLFW_KEY_ESCAPE: Input::esc_pressed = true; break;
-			case GLFW_KEY_UP: Input::up_pressed = true; break;
-			case GLFW_KEY_DOWN: Input::down_pressed = true; break;
-			case GLFW_KEY_LEFT: Input::left_pressed = true; break;
-			case GLFW_KEY_RIGHT: Input::right_pressed = true; break;
-			default: break;
-			}
-		}
-
-		if (action == GLFW_RELEASE) {
-			switch (key) {
-			case GLFW_KEY_W: Input::w_pressed = false; break;
-			case GLFW_KEY_A: Input::a_pressed = false; break;
-			case GLFW_KEY_S: Input::s_pressed = false; break;
-			case GLFW_KEY_D: Input::d_pressed = false; break;
-			case GLFW_KEY_SPACE: Input::space_pressed = false; break;
-			case GLFW_KEY_LEFT_SHIFT: Input::left_shift_pressed = false; break;
-			case GLFW_KEY_ENTER: Input::enter_pressed = false; break;
-			case GLFW_KEY_LEFT_CONTROL: Input::left_ctrl_pressed = false; break;
-			case GLFW_KEY_LEFT_ALT: Input::left_alt_pressed = false; break;
-			case GLFW_KEY_ESCAPE: Input::esc_pressed = false; break;
-			case GLFW_KEY_UP: Input::up_pressed = false; break;
-			case GLFW_KEY_DOWN: Input::down_pressed = false; break;
-			case GLFW_KEY_LEFT: Input::left_pressed = false; break;
-			case GLFW_KEY_RIGHT: Input::right_pressed = false; break;
-			default: break;
-			}
-		}*/
 	}
 }

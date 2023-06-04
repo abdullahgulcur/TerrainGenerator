@@ -24,7 +24,6 @@ namespace Editor {
 	void EditorContext::init() {
 
 		menu->init();
-		//camera->init(menu->sceneRect.x, menu->sceneRect.y);
 	}
 
 	void EditorContext::update(float dt) {

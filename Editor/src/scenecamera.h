@@ -73,7 +73,6 @@ namespace Editor {
 		~SceneCamera();
 		void startMatrices();
 		void changeSceneCamera();
-		void init(int width, int height);
 		void update(float dt);
 		void controlMouse(float dt);
 		void teleportMouse(glm::vec2& mousePos, float& scenePosX, float& scenePosY, float& sceneRegionX,

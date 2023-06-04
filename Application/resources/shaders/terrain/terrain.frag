@@ -28,6 +28,8 @@ uniform sampler2D albedoT2;
 uniform sampler2D albedoT3;
 uniform sampler2D albedoT5;
 uniform sampler2D albedoT6;
+uniform sampler2D albedoT7;
+uniform sampler2D albedoT8;
 
 uniform sampler2D normalT0;
 uniform sampler2D normalT1;
@@ -37,6 +39,8 @@ uniform sampler2D normalT4;
 uniform sampler2D normalT5;
 uniform sampler2D normalT6;
 uniform sampler2D normalT7;
+uniform sampler2D normalT8;
+uniform sampler2D normalT9;
 
 // Snow Color
 uniform vec3 color0;
@@ -77,6 +81,12 @@ uniform	float scale_color6_dist1;
 uniform	float scale_color7_dist0;
 uniform	float scale_color7_dist1;
 
+uniform	float scale_color8_dist0;
+uniform	float scale_color8_dist1;
+
+uniform	float scale_color9_dist0;
+uniform	float scale_color9_dist1;
+
 uniform	float macroScale_0;
 uniform	float macroScale_1;
 uniform	float macroScale_2;
@@ -84,7 +94,7 @@ uniform	float macroAmount;
 uniform	float macroPower;
 uniform	float macroOpacity;
 
-//GRASS LAYER
+// MUD LAYER
 uniform	float overlayBlendScale0;
 uniform	float overlayBlendAmount0;
 uniform	float overlayBlendPower0;
@@ -102,11 +112,19 @@ uniform	float overlayBlendAmount2;
 uniform	float overlayBlendPower2;
 uniform	float overlayBlendOpacity2;
 
+// SNOW LAYER
+uniform	float overlayBlendScale3;
+uniform	float overlayBlendAmount3;
+uniform	float overlayBlendPower3;
+uniform	float overlayBlendOpacity3;
+
 uniform	float slopeSharpness0;
 uniform	float slopeSharpness1;
+uniform	float slopeSharpness2;
 
 uniform	float slopeBias0;
 uniform	float slopeBias1;
+uniform	float slopeBias2;
 
 uniform	float heightBias0;
 uniform	float heightSharpness0;
@@ -177,6 +195,7 @@ void main(){
     float worldSpaceSlope = dot(Normal, vec3(0,1,0));
     float worldSpaceSlopeBlend0 = clamp((slopeBias0 - worldSpaceSlope) / slopeSharpness0 + 0.5, 0, 1);
     float worldSpaceSlopeBlend1 = clamp((slopeBias1 - worldSpaceSlope) / slopeSharpness1 + 0.5, 0, 1);
+    float worldSpaceSlopeBlend2 = clamp((slopeBias2 - worldSpaceSlope) / slopeSharpness2 + 0.5, 0, 1);
 
     float worldSpaceHeight = WorldPos.y;
     float worldSpaceHeightBlend0 = clamp((worldSpaceHeight - heightBias0) / heightSharpness0 + 0.5, 0, 1);
@@ -258,6 +277,26 @@ void main(){
     float spec6 = albedo6.r; 
     spec6 = clamp(spec6, 0, 0.5) * 0.5;
 
+    // GRASS LAWN ------------
+    vec3 albedo_8_dist_0 = pow(texture(albedoT7, vec2(TexCoords * scale_color8_dist0)).rgb, vec3(2.2));
+    vec3 normal_8_dist_0 = texture(normalT8,     vec2(TexCoords * scale_color8_dist0)).rgb * 2 - 1;
+    vec3 albedo_8_dist_1 = pow(texture(albedoT7, vec2(TexCoords * scale_color8_dist1)).rgb, vec3(2.2));
+    vec3 normal_8_dist_1 = texture(normalT8,     vec2(TexCoords * scale_color8_dist1)).rgb * 2 - 1;
+    vec3 albedo8 = mix(albedo_8_dist_1, albedo_8_dist_0, distanceBlend) * macro;
+    vec3 normal8 = mix(normal_8_dist_1, normal_8_dist_0, distanceBlend);
+    float spec8 = albedo8.r; 
+    spec8 = clamp(spec8, 0, 0.5) * 0.5;
+
+    // GRASS WILD ------------
+    vec3 albedo_9_dist_0 = pow(texture(albedoT8, vec2(TexCoords * scale_color9_dist0)).rgb, vec3(2.2));
+    vec3 normal_9_dist_0 = texture(normalT9,     vec2(TexCoords * scale_color9_dist0)).rgb * 2 - 1;
+    vec3 albedo_9_dist_1 = pow(texture(albedoT8, vec2(TexCoords * scale_color9_dist1)).rgb, vec3(2.2));
+    vec3 normal_9_dist_1 = texture(normalT9,     vec2(TexCoords * scale_color9_dist1)).rgb * 2 - 1;
+    vec3 albedo9 = mix(albedo_9_dist_1, albedo_9_dist_0, distanceBlend) * macro;
+    vec3 normal9 = mix(normal_9_dist_1, normal_9_dist_0, distanceBlend);
+    float spec9 = albedo9.r; 
+    spec9 = clamp(spec9, 0, 0.5) * 0.5;
+
     // ------- GRASS UNCUT & GRASS DRIED (Interpolate)
     float noiseVal = texture(noiseTexture, TexCoords * overlayBlendScale0).r;
     noiseVal += texture(noiseTexture, TexCoords * overlayBlendScale0 * 0.2).r;
@@ -270,6 +309,19 @@ void main(){
     vec3 albedoVariation0 = mix(albedo0, albedo1, noiseVal);
     vec3 normalVariation0 = mix(normal0, normal1, noiseVal);
     float specVariation0 = mix(spec0, spec1, noiseVal);
+
+    // ------- GRASS LAWN & GRASS WILD (Interpolate)
+
+    noiseVal = texture(noiseTexture, TexCoords * overlayBlendScale3).r;
+    noiseVal += texture(noiseTexture, TexCoords * overlayBlendScale3 * 0.2).r;
+    noiseVal += texture(noiseTexture, TexCoords * overlayBlendScale3 * 0.05).r;
+    noiseVal * 0.33;
+    noiseVal *= overlayBlendAmount3;
+    noiseVal = clamp(pow(noiseVal , overlayBlendPower3), 0, 1) * overlayBlendOpacity3;
+
+    vec3 albedoVariation3 = mix(albedo8, albedo9, noiseVal);
+    vec3 normalVariation3 = mix(normal8, normal9, noiseVal);
+    float specVariation3 = mix(spec8, spec9, noiseVal);
 
     // ------- SNOW 0 & SNOW 1 (Interpolate)
 
@@ -310,17 +362,25 @@ void main(){
     float worldSpaceTextureSlope3 = dot(TextureNormal3, vec3(0,1,0));
     vec3 TextureNormal0 = TBN * normal0;
     float worldSpaceTextureSlope0 = dot(TextureNormal0, vec3(0,1,0));
+    vec3 TextureNormal8 = TBN * normal8;
+    float worldSpaceTextureSlope1 = dot(TextureNormal8, vec3(0,1,0));
 
     float slope2 = mix(worldSpaceSlope, worldSpaceTextureSlope2, worldSpaceSlopeBlend1);
     float slopeBlend2 = clamp((slopeBias1 - slope2) / slopeSharpness1 + 0.5, 0, 1);
     float slope3 = mix(worldSpaceSlope, worldSpaceTextureSlope3, worldSpaceSlopeBlend0);
     float slopeBlend3 = clamp((slopeBias0 - slope3) / slopeSharpness0 + 0.5, 0, 1);
+    float slope4 = mix(worldSpaceSlope, worldSpaceTextureSlope1, worldSpaceSlopeBlend2);
+    float slopeBlend4 = clamp((slopeBias2 - slope4) / slopeSharpness2 + 0.5, 0, 1);
 
 
     // ---- soil,mulch,snow + rocks ----
     vec3 albedo = mix(albedoVariation0, albedo3, slopeBlend3);
     vec3 normal = mix(normalVariation0, normal3, slopeBlend3);
     float specular = mix(specVariation0, spec3, slopeBlend3);
+
+    albedo = mix(albedoVariation3, albedo, slopeBlend4);
+    normal = mix(normalVariation3, normal, slopeBlend4);
+    specular = mix(specVariation3, specular, slopeBlend4);
 
     // ---- soil,mulch,snow,rocks + cliff ----
     albedo = mix(albedo, albedoVariation1, slopeBlend2);

@@ -32,7 +32,6 @@ int main() {
 		float coreEnd = (float)glfwGetTime();
 		float delta = coreEnd - coreStart;
 
-
 		EditorContext::instance->update(dt);
 
 		deltaTotal += delta;

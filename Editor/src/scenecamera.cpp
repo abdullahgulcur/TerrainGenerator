@@ -43,11 +43,6 @@ namespace Editor {
 		SceneCamera::startMatrices();
 	}
 
-	void SceneCamera::init(int width, int height) {
-
-		//SceneCamera::createFBO(width, height);
-	}
-
 	bool SceneCamera::load() {
 
 		std::string path = "database/scenecamera_" + std::to_string(Scene::getActiveSceneIndex()) + ".xml";
@@ -198,8 +193,6 @@ namespace Editor {
 			mouseTeleport = true;
 		}
 	}
-
-
 
 	void SceneCamera::updateProjectionMatrix(int sizeX, int sizeY) {
 

@@ -14,8 +14,6 @@ namespace Core {
 		fileSystem = new FileSystem();
 		renderer = new Renderer();
 		scene = new Scene();
-		//terrainScene = new TerrainScene();
-
 	}
 
 	CoreContext::~CoreContext() {

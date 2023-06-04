@@ -89,6 +89,8 @@ namespace Core {
 		unsigned int albedo4;
 		unsigned int albedo5;
 		unsigned int albedo6;
+		unsigned int albedo7;
+		unsigned int albedo8;
 
 		/* Terrain normal textures */
 		unsigned int normal0;
@@ -99,6 +101,8 @@ namespace Core {
 		unsigned int normal5;
 		unsigned int normal6;
 		unsigned int normal7;
+		unsigned int normal8;
+		unsigned int normal9;
 
 		/* For the geometry */
 		unsigned int blockVAO;
@@ -167,6 +171,12 @@ namespace Core {
 		float scale_color7_dist0 = 0.80f;
 		float scale_color7_dist1 = 0.05f;
 
+		float scale_color8_dist0 = 0.80f;
+		float scale_color8_dist1 = 0.05f;
+
+		float scale_color9_dist0 = 0.80f;
+		float scale_color9_dist1 = 0.05f;
+
 		glm::vec3 color0;
 		glm::vec3 color1;
 
@@ -192,11 +202,18 @@ namespace Core {
 		float overlayBlendPower2 = 9.f;
 		float overlayBlendOpacity2 = 0.9f;
 
+		float overlayBlendScale3 = 0.55f;
+		float overlayBlendAmount3 = 0.6f;
+		float overlayBlendPower3 = 9.f;
+		float overlayBlendOpacity3 = 0.9f;
+
 		float slopeSharpness0 = 0.074f;
 		float slopeSharpness1 = 0.08f;
+		float slopeSharpness2 = 0.08f;
 
 		float slopeBias0 = 0.922f;
 		float slopeBias1 = 0.904f;
+		float slopeBias2 = 0.904f;
 
 		float heightBias0 = 15;
 		float heightSharpness0 = 7;

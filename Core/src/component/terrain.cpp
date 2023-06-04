@@ -75,14 +75,18 @@ namespace Core {
 		glUniform1i(glGetUniformLocation(terrainProgramID, "albedoT3"), 7);
 		glUniform1i(glGetUniformLocation(terrainProgramID, "albedoT5"), 8);
 		glUniform1i(glGetUniformLocation(terrainProgramID, "albedoT6"), 9);
-		glUniform1i(glGetUniformLocation(terrainProgramID, "normalT0"), 10);
-		glUniform1i(glGetUniformLocation(terrainProgramID, "normalT1"), 11);
-		glUniform1i(glGetUniformLocation(terrainProgramID, "normalT2"), 12);
-		glUniform1i(glGetUniformLocation(terrainProgramID, "normalT3"), 13);
-		glUniform1i(glGetUniformLocation(terrainProgramID, "normalT4"), 14);
-		glUniform1i(glGetUniformLocation(terrainProgramID, "normalT5"), 15);
-		glUniform1i(glGetUniformLocation(terrainProgramID, "normalT6"), 16);
-		glUniform1i(glGetUniformLocation(terrainProgramID, "normalT7"), 17);
+		glUniform1i(glGetUniformLocation(terrainProgramID, "albedoT7"), 10);
+		glUniform1i(glGetUniformLocation(terrainProgramID, "albedoT8"), 11);
+		glUniform1i(glGetUniformLocation(terrainProgramID, "normalT0"), 12);
+		glUniform1i(glGetUniformLocation(terrainProgramID, "normalT1"), 13);
+		glUniform1i(glGetUniformLocation(terrainProgramID, "normalT2"), 14);
+		glUniform1i(glGetUniformLocation(terrainProgramID, "normalT3"), 15);
+		glUniform1i(glGetUniformLocation(terrainProgramID, "normalT4"), 16);
+		glUniform1i(glGetUniformLocation(terrainProgramID, "normalT5"), 17);
+		glUniform1i(glGetUniformLocation(terrainProgramID, "normalT6"), 18);
+		glUniform1i(glGetUniformLocation(terrainProgramID, "normalT7"), 19);
+		glUniform1i(glGetUniformLocation(terrainProgramID, "normalT8"), 20);
+		glUniform1i(glGetUniformLocation(terrainProgramID, "normalT9"), 21);
 	}
 
 	void Terrain::initBlockAABBs() {
@@ -450,6 +454,8 @@ namespace Core {
 		albedo3 = textures.at("groundsandy_a")->textureId;
 		albedo5 = textures.at("sandbeach_a")->textureId;
 		albedo6 = textures.at("lichenedrock_a")->textureId;
+		albedo7 = textures.at("grasslawn_a")->textureId;
+		albedo8 = textures.at("grasswild_a")->textureId;
 
 		normal0 = textures.at("soilmulch_n")->textureId;
 		normal1 = textures.at("groundforest_n")->textureId;
@@ -459,6 +465,8 @@ namespace Core {
 		normal5 = textures.at("sandbeach_n")->textureId;
 		normal6 = textures.at("lichenedrock_n")->textureId;
 		normal7 = textures.at("snowpure_n")->textureId;
+		normal8 = textures.at("grasslawn_n")->textureId;
+		normal9 = textures.at("grasswild_n")->textureId;
 
 		macroTexture = textures.at("gold_a")->textureId;
 		noiseTexture = textures.at("noiseTexture")->textureId;
@@ -683,6 +691,12 @@ namespace Core {
 		glUniform1f(glGetUniformLocation(terrainProgramID, "scale_color7_dist0"), scale_color7_dist0);
 		glUniform1f(glGetUniformLocation(terrainProgramID, "scale_color7_dist1"), scale_color7_dist1);
 
+		glUniform1f(glGetUniformLocation(terrainProgramID, "scale_color8_dist0"), scale_color8_dist0);
+		glUniform1f(glGetUniformLocation(terrainProgramID, "scale_color8_dist1"), scale_color8_dist1);
+
+		glUniform1f(glGetUniformLocation(terrainProgramID, "scale_color9_dist0"), scale_color9_dist0);
+		glUniform1f(glGetUniformLocation(terrainProgramID, "scale_color9_dist1"), scale_color9_dist1);
+
 		glUniform1f(glGetUniformLocation(terrainProgramID, "macroScale_0"), macroScale_0);
 		glUniform1f(glGetUniformLocation(terrainProgramID, "macroScale_1"), macroScale_1);
 		glUniform1f(glGetUniformLocation(terrainProgramID, "macroScale_2"), macroScale_2);
@@ -705,14 +719,21 @@ namespace Core {
 		glUniform1f(glGetUniformLocation(terrainProgramID, "overlayBlendPower2"), overlayBlendPower2);
 		glUniform1f(glGetUniformLocation(terrainProgramID, "overlayBlendOpacity2"), overlayBlendOpacity2);
 
+		glUniform1f(glGetUniformLocation(terrainProgramID, "overlayBlendScale3"), overlayBlendScale3);
+		glUniform1f(glGetUniformLocation(terrainProgramID, "overlayBlendAmount3"), overlayBlendAmount3);
+		glUniform1f(glGetUniformLocation(terrainProgramID, "overlayBlendPower3"), overlayBlendPower3);
+		glUniform1f(glGetUniformLocation(terrainProgramID, "overlayBlendOpacity3"), overlayBlendOpacity3);
+
 		glUniform3fv(glGetUniformLocation(terrainProgramID, "color0"), 1, &color0[0]);
 		glUniform3fv(glGetUniformLocation(terrainProgramID, "color1"), 1, &color1[0]);
 					
 		glUniform1f(glGetUniformLocation(terrainProgramID, "slopeSharpness0"), slopeSharpness0);
 		glUniform1f(glGetUniformLocation(terrainProgramID, "slopeSharpness1"), slopeSharpness1);
+		glUniform1f(glGetUniformLocation(terrainProgramID, "slopeSharpness2"), slopeSharpness2);
 					
 		glUniform1f(glGetUniformLocation(terrainProgramID, "slopeBias0"), slopeBias0);
 		glUniform1f(glGetUniformLocation(terrainProgramID, "slopeBias1"), slopeBias1);
+		glUniform1f(glGetUniformLocation(terrainProgramID, "slopeBias2"), slopeBias2);
 					
 		glUniform1f(glGetUniformLocation(terrainProgramID, "heightBias0"), heightBias0);
 		glUniform1f(glGetUniformLocation(terrainProgramID, "heightSharpness0"), heightSharpness0);
@@ -745,23 +766,31 @@ namespace Core {
 		glBindTexture(GL_TEXTURE_2D, albedo5);
 		glActiveTexture(GL_TEXTURE9);
 		glBindTexture(GL_TEXTURE_2D, albedo6);
-		
 		glActiveTexture(GL_TEXTURE10);
-		glBindTexture(GL_TEXTURE_2D, normal0);
+		glBindTexture(GL_TEXTURE_2D, albedo7);
 		glActiveTexture(GL_TEXTURE11);
-		glBindTexture(GL_TEXTURE_2D, normal1);
+		glBindTexture(GL_TEXTURE_2D, albedo8);
+
 		glActiveTexture(GL_TEXTURE12);
-		glBindTexture(GL_TEXTURE_2D, normal2);
+		glBindTexture(GL_TEXTURE_2D, normal0);
 		glActiveTexture(GL_TEXTURE13);
-		glBindTexture(GL_TEXTURE_2D, normal3);
+		glBindTexture(GL_TEXTURE_2D, normal1);
 		glActiveTexture(GL_TEXTURE14);
-		glBindTexture(GL_TEXTURE_2D, normal4);
+		glBindTexture(GL_TEXTURE_2D, normal2);
 		glActiveTexture(GL_TEXTURE15);
-		glBindTexture(GL_TEXTURE_2D, normal5);
+		glBindTexture(GL_TEXTURE_2D, normal3);
 		glActiveTexture(GL_TEXTURE16);
-		glBindTexture(GL_TEXTURE_2D, normal6);
+		glBindTexture(GL_TEXTURE_2D, normal4);
 		glActiveTexture(GL_TEXTURE17);
+		glBindTexture(GL_TEXTURE_2D, normal5);
+		glActiveTexture(GL_TEXTURE18);
+		glBindTexture(GL_TEXTURE_2D, normal6);
+		glActiveTexture(GL_TEXTURE19);
 		glBindTexture(GL_TEXTURE_2D, normal7);
+		glActiveTexture(GL_TEXTURE20);
+		glBindTexture(GL_TEXTURE_2D, normal8);
+		glActiveTexture(GL_TEXTURE21);
+		glBindTexture(GL_TEXTURE_2D, normal9);
 
 		std::vector<TerrainVertexAttribs> instanceArray;
 

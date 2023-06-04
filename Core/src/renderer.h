@@ -4,12 +4,6 @@
 
 namespace Core {
 
-	// structs
-	// standard mesh
-	// alpha blended mesh
-	// transparent mesh
-	// ...
-
 	class __declspec(dllexport) Renderer {
 
 	private:

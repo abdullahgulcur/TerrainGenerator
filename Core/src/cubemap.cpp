@@ -3,10 +3,9 @@
 #include "cubemap.h"
 #include "glewcontext.h"
 #include "renderer.h"
-
+#include "shader.h"
 #include "GL/glew.h"
 #include "glm/gtc/matrix_transform.hpp"
-
 #include "FreeImage.h"
 
 namespace Core {
@@ -30,10 +29,10 @@ namespace Core {
 		GlewContext* glew = CoreContext::instance->glewContext;
 		Renderer* renderer = CoreContext::instance->renderer;
 
-		int equirectangularToCubemapShaderProgramId = glew->loadShaders("resources/shaders/cubemap.vert", "resources/shaders/equirectangular_to_cubemap.frag");
-		int irradianceShaderProgramId = glew->loadShaders("resources/shaders/cubemap.vert", "resources/shaders/irradiance_convolution.frag");
-		int prefilterShaderProgramId = glew->loadShaders("resources/shaders/cubemap.vert", "resources/shaders/prefilter.frag");
-		int brdfShaderProgramId = glew->loadShaders("resources/shaders/brdf.vert", "resources/shaders/brdf.frag");
+		int equirectangularToCubemapShaderProgramId = Shader::loadShaders("resources/shaders/cubemap.vert", "resources/shaders/equirectangular_to_cubemap.frag");
+		int irradianceShaderProgramId = Shader::loadShaders("resources/shaders/cubemap.vert", "resources/shaders/irradiance_convolution.frag");
+		int prefilterShaderProgramId = Shader::loadShaders("resources/shaders/cubemap.vert", "resources/shaders/prefilter.frag");
+		int brdfShaderProgramId = Shader::loadShaders("resources/shaders/brdf.vert", "resources/shaders/brdf.frag");
 
 		unsigned int backgroundShaderProgramId = CoreContext::instance->renderer->backgroundShaderProgramId;
 

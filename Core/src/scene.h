@@ -2,12 +2,9 @@
 
 #include "rapidXML/rapidxml_print.hpp"
 #include "rapidXML/rapidxml.hpp"
-
 #include "GLM/glm.hpp"
 #include "cubemap.h"
-
 #include "component/terrain.h"
-
 
 namespace Core {
 
@@ -25,34 +22,11 @@ namespace Core {
 		glm::vec4 planes[6];
 	};
 
-	// octree
-	// node -> key: position val: (transform, type)
-
 	class __declspec(dllexport) Scene {
 
 	private:
 
 	public:
-
-		// no streaming
-			// one octree 
-			// custom structs for foliage
-			// 
-			// 
-			// grass 0 transforms
-			// grass 1 transforms
-			// grass 2 transforms
-			// 
-			// bush 0 transforms
-			// bush 1 transforms
-			// bush 2 transforms
-			//
-			// tree 0 transforms
-			// tree 1 transforms
-			// tree 2 transforms
-
-		// global volume
-	    // light
 
 		// FRAMEBUFFER ----
 		unsigned int width;
@@ -68,22 +42,20 @@ namespace Core {
 		unsigned int FBO;
 		unsigned int RBO;
 		unsigned int framebufferProgramID;
-		// ----------------
 
-		Terrain* terrain = NULL; // void ptr
-
+		Terrain* terrain = NULL;
 		Cubemap* cubemap;
-
 		DirectionalLight directionalLight;
 		CameraInfo cameraInfo;
 
-		int activeSceneIndex; // EDITOR ONLY
+		int activeSceneIndex; // EDITOR
 
 		Scene();
 		~Scene();
 		void start();
 		void update(float dt);
 		static int getActiveSceneIndex();
+		void initFramebuffers();
 		static std::string getActiveScenePath();
 		static void setActiveSceneIndex(int index);
 		static void changeScene(int index);

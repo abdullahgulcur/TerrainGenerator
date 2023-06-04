@@ -21,6 +21,8 @@ namespace Core {
 		FileSystem::loadTexture("resources/textures/terrain/lichenedrock_a.DDS");
 		FileSystem::loadTexture("resources/textures/terrain/sandbeach_a.DDS");
 		FileSystem::loadTexture("resources/textures/terrain/soilmulch_a.DDS");
+		FileSystem::loadTexture("resources/textures/terrain/grasslawn_a.DDS");
+		FileSystem::loadTexture("resources/textures/terrain/grasswild_a.DDS");
 
 		FileSystem::loadTexture("resources/textures/terrain/cliffgranite_n.DDS");
 		FileSystem::loadTexture("resources/textures/terrain/groundforest_n.DDS");
@@ -30,6 +32,8 @@ namespace Core {
 		FileSystem::loadTexture("resources/textures/terrain/soilmulch_n.DDS");
 		FileSystem::loadTexture("resources/textures/terrain/snowfresh_n.DDS");
 		FileSystem::loadTexture("resources/textures/terrain/snowpure_n.DDS");
+		FileSystem::loadTexture("resources/textures/terrain/grasslawn_n.DDS");
+		FileSystem::loadTexture("resources/textures/terrain/grasswild_n.DDS");
 
 		FileSystem::loadTexture("resources/textures/terrain/gold_a.png");
 		FileSystem::loadTexture("resources/textures/terrain/noiseTexture.png");

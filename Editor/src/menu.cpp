@@ -19,9 +19,7 @@ namespace Editor {
 	void Menu::init() {
 
 		Menu::initImGui();
-
 		Menu::initDefaultIcons();
-
 	}
 
 	void Menu::initImGui() {
@@ -71,7 +69,6 @@ namespace Editor {
 		ImGui::DestroyContext();
 	}
 
-
 	void Menu::inputControl() {
 
 		if (!ImGui::GetIO().KeyCtrl) {
@@ -91,59 +88,41 @@ namespace Editor {
 			if (terrainHolded) {
 				terrainSelected = true;
 				terrainHolded = false;
-
 				environmentSelected = false;
 			}
 
 			if (environmentHolded) {
 				environmentSelected = true;
 				environmentHolded = false;
-
 				terrainSelected = false;
 			}
-
 		}
 
-		if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Enter)) || ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_KeyPadEnter))) {
+		if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Enter)) || ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_KeyPadEnter))) { }
 
-			
-		}
-
-		if (ImGui::IsMouseDoubleClicked(0)) {
-
-		
-		}
+		if (ImGui::IsMouseDoubleClicked(0)) { }
 
 		if (scenePanelClicked) {
 
-			if (!ImGuizmo::IsUsing()) {
+			if (!ImGuizmo::IsUsing()) { }
 
-			}
-
-			//terrainColored = false;
-			//environmentColored = false;
-			//environmentSelected = false;
-			//environmentColored = false;
-
+			terrainColored = false;
+			terrainSelected = false;
+			environmentColored = false;
+			environmentSelected = false;
 			scenePanelClicked = false;
 		}
 
 		if (ImGui::GetIO().KeyCtrl) {
 
-			if (ImGui::IsKeyPressed('D')) {
+			if (ImGui::IsKeyPressed('D')) { }
 
-			}
-
-			if (ImGui::IsKeyPressed('S')) {
-
+			if (ImGui::IsKeyPressed('S'))
 				CoreContext::instance->scene->saveScene(Scene::getActiveScenePath());
-			}
 
 		}
 
-		if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Delete))) {
-
-		}
+		if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Delete))) { }
 	}
 
 	void Menu::update() {
@@ -151,17 +130,12 @@ namespace Editor {
 		Menu::newFrameImGui();
 		Menu::createPanels();
 		Menu::renderImGui();
-
 		Menu::inputControl();
-
 	}
 
 	void Menu::createPanels() {
 
-		static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_None;
-
 		ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDocking; //ImGuiWindowFlags_MenuBar
-
 		const ImGuiViewport* viewport = ImGui::GetMainViewport();
 		ImGui::SetNextWindowPos(viewport->WorkPos);
 		ImGui::SetNextWindowSize(viewport->WorkSize);
@@ -187,9 +161,7 @@ namespace Editor {
 		Menu::createInspectorPanel();
 		Menu::createStatisticsPanel();
 		Menu::createHierarchyPanel();
-		//Menu::createFilesPanel();
 		Menu::createScenePanel();
-		
 		ImGui::End();
 	}
 
@@ -277,42 +249,6 @@ namespace Editor {
 
 				ImGui::PopStyleColor();
 
-				//if (!Editor::instance->gameStarted) {
-
-				//	if (ImGui::ImageButton((ImTextureID)startTextureId, size, uv0, uv1, frame_padding, bg_col, tint_col)) {
-
-				//		//Core::instance->sceneManager->currentScene->backup();
-				//		auto file = Core::instance->fileSystem->sceneFileToFile.find(Core::instance->fileSystem->currentSceneFile);
-				//		if (file != Core::instance->fileSystem->sceneFileToFile.end())
-				//			Core::instance->fileSystem->currentSceneFile->saveEntities(file->second->path);
-
-				//		Editor::instance->gameStarted = true;
-				//		Core::instance->startGame();
-				//	}
-				//}
-				//else {
-
-				//	if (ImGui::ImageButton((ImTextureID)stopTextureId, size, uv0, uv1, frame_padding, bg_col, tint_col)) {
-
-				//		int selectedEntityId = -1;
-				//		if (selectedEntity)
-				//			selectedEntityId = selectedEntity->id;
-
-				//		Editor::instance->gameStarted = false;
-				//		Core::instance->sceneManager->restartCurrentScene();
-
-				//		if (selectedEntityId != -1) {
-				//			selectedEntity = Core::instance->sceneManager->currentScene->entityIdToEntity[selectedEntityId];
-				//			coloredEntity = selectedEntity;
-				//		}
-				//	}
-				//}
-				//ImGui::SameLine();
-
-				//if (ImGui::ImageButton((ImTextureID)pauseTextureId, size, uv0, uv1, frame_padding, bg_col, tint_col)) {
-
-				//}
-
 				ImGui::EndMenuBar();
 			}
 			ImGui::End();
@@ -325,7 +261,6 @@ namespace Editor {
 		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(5, 4));
 		if (ImGui::BeginViewportSideBar("##MainStatusBar", viewport, ImGuiDir_Down, height + 4, window_flags)) {
 			if (ImGui::BeginMenuBar()) {
-				//ImGui::Text(statusMessage.c_str());
 				ImGui::EndMenuBar();
 			}
 			ImGui::End();
@@ -341,7 +276,6 @@ namespace Editor {
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 5));
 		ImGui::Begin("Inspector");
 
-
 		ImGui::Indent(6);
 
 		if (environmentSelected)
@@ -354,19 +288,15 @@ namespace Editor {
 
 		ImGui::End();
 		ImGui::PopStyleVar();
-
 	}
 
 	void Menu::createStatisticsPanel() {
 
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(5, 5));
 		ImGui::Begin("Statistics");
-
 		ImGui::TextColored(DEFAULT_TEXT_COLOR, "%.1f FPS", ImGui::GetIO().Framerate);
-
 		ImGui::End();
 		ImGui::PopStyleVar();
-
 	}
 
 
@@ -410,7 +340,6 @@ namespace Editor {
 		ImGui::SetNextItemOpen(true);
 
 		bool treeNodeOpen = ImGui::TreeNode("##0");
-
 
 		ImVec2 imgsize = ImVec2(16.0f, 16.0f);
 		ImVec2 uv0 = ImVec2(0.0f, 0.0f);
@@ -576,6 +505,16 @@ namespace Editor {
 			ImGui::SameLine(); ImGui::TextColored(DEFAULT_TEXT_COLOR, "F"); ImGui::SameLine(); ImGui::PushItemWidth(itemWidth);
 			ImGui::DragFloat("##scale_color7_dist1", &terrain->scale_color7_dist1, 0.0001f, 0.0f, 1.0f, "%.4f");
 
+			ImGui::TextColored(DEFAULT_TEXT_COLOR, "Color 8  N"); ImGui::SameLine(); ImGui::PushItemWidth(itemWidth);
+			ImGui::DragFloat("##scale_color8_dist0", &terrain->scale_color8_dist0, 0.01f, 0.0f, 1.0f, "%.2f");
+			ImGui::SameLine(); ImGui::TextColored(DEFAULT_TEXT_COLOR, "F"); ImGui::SameLine(); ImGui::PushItemWidth(itemWidth);
+			ImGui::DragFloat("##scale_color8_dist1", &terrain->scale_color8_dist1, 0.0001f, 0.0f, 1.0f, "%.4f");
+
+			ImGui::TextColored(DEFAULT_TEXT_COLOR, "Color 9  N"); ImGui::SameLine(); ImGui::PushItemWidth(itemWidth);
+			ImGui::DragFloat("##scale_color9_dist0", &terrain->scale_color9_dist0, 0.01f, 0.0f, 1.0f, "%.2f");
+			ImGui::SameLine(); ImGui::TextColored(DEFAULT_TEXT_COLOR, "F"); ImGui::SameLine(); ImGui::PushItemWidth(itemWidth);
+			ImGui::DragFloat("##scale_color9_dist1", &terrain->scale_color9_dist1, 0.0001f, 0.0f, 1.0f, "%.4f");
+
 			ImGui::Separator();
 
 			ImGui::TextColored(DEFAULT_TEXT_COLOR, "FLAT COLOR  0"); ImGui::SameLine();
@@ -641,7 +580,7 @@ namespace Editor {
 			ImGui::SameLine(); ImGui::TextColored(DEFAULT_TEXT_COLOR, "O"); ImGui::PushItemWidth(itemWidth);
 			ImGui::SameLine(); ImGui::DragFloat("##overlayBlendOpacity1", &terrain->overlayBlendOpacity1, 0.01f, 0.0f, 32.0f, "%.2f");
 
-			ImGui::TextColored(DEFAULT_TEXT_COLOR, "Group 0  S"); ImGui::PushItemWidth(itemWidth);
+			ImGui::TextColored(DEFAULT_TEXT_COLOR, "Group 2  S"); ImGui::PushItemWidth(itemWidth);
 			ImGui::SameLine(); ImGui::DragFloat("##overlayBlendScale2", &terrain->overlayBlendScale2, 0.001f, 0.0f, 1.0f, "%.3f");
 			ImGui::SameLine(); ImGui::TextColored(DEFAULT_TEXT_COLOR, "A"); ImGui::PushItemWidth(itemWidth);
 			ImGui::SameLine(); ImGui::DragFloat("##overlayBlendAmount2", &terrain->overlayBlendAmount2, 0.01f, 0.0f, 32.0f, "%.2f");
@@ -649,6 +588,15 @@ namespace Editor {
 			ImGui::SameLine(); ImGui::DragFloat("##overlayBlendPower2", &terrain->overlayBlendPower2, 0.01f, 0.0f, 32.0f, "%.2f");
 			ImGui::SameLine(); ImGui::TextColored(DEFAULT_TEXT_COLOR, "O"); ImGui::PushItemWidth(itemWidth);
 			ImGui::SameLine(); ImGui::DragFloat("##overlayBlendOpacity2", &terrain->overlayBlendOpacity2, 0.01f, 0.0f, 32.0f, "%.2f");
+
+			ImGui::TextColored(DEFAULT_TEXT_COLOR, "Group 3  S"); ImGui::PushItemWidth(itemWidth);
+			ImGui::SameLine(); ImGui::DragFloat("##overlayBlendScale3", &terrain->overlayBlendScale3, 0.001f, 0.0f, 1.0f, "%.3f");
+			ImGui::SameLine(); ImGui::TextColored(DEFAULT_TEXT_COLOR, "A"); ImGui::PushItemWidth(itemWidth);
+			ImGui::SameLine(); ImGui::DragFloat("##overlayBlendAmount3", &terrain->overlayBlendAmount3, 0.01f, 0.0f, 32.0f, "%.2f");
+			ImGui::SameLine(); ImGui::TextColored(DEFAULT_TEXT_COLOR, "P"); ImGui::PushItemWidth(itemWidth);
+			ImGui::SameLine(); ImGui::DragFloat("##overlayBlendPower3", &terrain->overlayBlendPower3, 0.01f, 0.0f, 32.0f, "%.2f");
+			ImGui::SameLine(); ImGui::TextColored(DEFAULT_TEXT_COLOR, "O"); ImGui::PushItemWidth(itemWidth);
+			ImGui::SameLine(); ImGui::DragFloat("##overlayBlendOpacity3", &terrain->overlayBlendOpacity3, 0.01f, 0.0f, 32.0f, "%.2f");
 
 			ImGui::Separator();
 
@@ -665,6 +613,11 @@ namespace Editor {
 			ImGui::SameLine(); ImGui::DragFloat("##slopeBias1", &terrain->slopeBias1, 0.001f, 0.0f, 1.0f, "%.3f");
 			ImGui::SameLine(); ImGui::TextColored(DEFAULT_TEXT_COLOR, "Soft"); ImGui::PushItemWidth(itemWidth);
 			ImGui::SameLine(); ImGui::DragFloat("##slopeSharpness1", &terrain->slopeSharpness1, 0.001f, 0.0f, 1.0f, "%.3f");
+
+			ImGui::TextColored(DEFAULT_TEXT_COLOR, "Transition 2  Bias"); ImGui::PushItemWidth(itemWidth);
+			ImGui::SameLine(); ImGui::DragFloat("##slopeBias2", &terrain->slopeBias2, 0.001f, 0.0f, 1.0f, "%.3f");
+			ImGui::SameLine(); ImGui::TextColored(DEFAULT_TEXT_COLOR, "Soft"); ImGui::PushItemWidth(itemWidth);
+			ImGui::SameLine(); ImGui::DragFloat("##slopeSharpness2", &terrain->slopeSharpness2, 0.001f, 0.0f, 1.0f, "%.3f");
 
 			ImGui::TextColored(DEFAULT_TEXT_COLOR, "HEIGHT");
 
@@ -800,7 +753,6 @@ namespace Editor {
 					CoreContext::instance->scene->terrain->start();
 				}
 				
-				// include all the necessary end codes...
 				ImGui::PopStyleColor();
 				ImGui::EndPopup();
 				return;
@@ -946,11 +898,8 @@ namespace Editor {
 
 		anyEntityHovered = false;
 		popupItemClicked = false;
-
 		ImGuizmo::OPERATION optype = ImGuizmo::OPERATION::TRANSLATE;
-
 		scenePanelClicked = false;
-
 		terrainSelected = false;
 		terrainHolded = false;
 		terrainColored = false;

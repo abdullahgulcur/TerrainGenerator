@@ -5,11 +5,9 @@ namespace Core {
 
 	Shader::Shader(std::string path) {
 
-
 	}
 
 	Shader::~Shader() {
-
 
 	}
 

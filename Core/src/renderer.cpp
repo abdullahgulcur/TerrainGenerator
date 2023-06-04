@@ -28,17 +28,16 @@ namespace Core {
         Scene* scene = CoreContext::instance->scene;
 
         glBindFramebuffer(GL_FRAMEBUFFER, scene->FBO);
-        glEnable(GL_DEPTH_TEST); // enable depth testing (is disabled for rendering screen-space quad)
-        glDepthFunc(GL_LEQUAL); // set depth function to less than AND equal for skybox depth trick.
+        glEnable(GL_DEPTH_TEST);
+        glDepthFunc(GL_LEQUAL);
 
-        glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS); // enable depth testing (is disabled for rendering screen-space quad)
+        glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
         glViewport(0, 0, scene->width, scene->height);
         glClearColor(0.3f, 0.3f, 0.3f, 0.f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		if (Terrain* terrain = scene->terrain) {
 			//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-
 
 			auto start = high_resolution_clock::now();
 			terrain->onDraw();
