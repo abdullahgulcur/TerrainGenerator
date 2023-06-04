@@ -18,11 +18,11 @@ namespace Core {
 
 	CoreContext::~CoreContext() {
 
-		delete glfwContext;
-		delete glewContext;
-		delete fileSystem;
-		delete renderer;
 		delete scene;
+		delete renderer;
+		delete fileSystem;
+		delete glewContext;
+		delete glfwContext;
 
 		std::cout << "Core module shutdown." << std::endl;
 	}

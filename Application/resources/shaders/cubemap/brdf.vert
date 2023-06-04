@@ -1,4 +1,7 @@
 #version 460 core
+
+// ref: https://learnopengl.com/Model-Loading/Model
+
 layout (location = 0) in vec3 aPos;
 layout (location = 1) in vec2 aTexCoords;
 

@@ -9,6 +9,14 @@ namespace Core {
 
 	FileSystem::~FileSystem() {
 
+		for (auto it : textures)
+			delete it.second;
+		for (auto it : cubemaps)
+			delete it.second;
+		for (auto it : shaders)
+			delete it.second;
+		for (auto it : meshes)
+			delete it.second;
 	}
 
 	void FileSystem::init() {

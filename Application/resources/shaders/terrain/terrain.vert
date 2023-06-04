@@ -1,3 +1,14 @@
+// Copyright (c) Abdullah Gulcur 2022-2023
+// 
+// This project is licensed under the terms of the MIT license.
+// For a copy, see <https://opensource.org/licenses/MIT>.
+
+// Terrain Vertex Shader
+
+// REFERENCES
+// Virtual texturing for heightmaps. Reference: https://notkyon.moe/vt/Clipmap.pdf
+// Clipmap rendering using nested grids. Reference : https://developer.nvidia.com/gpugems/gpugems2/part-i-geometric-complexity/chapter-2-terrain-rendering-using-gpu-based-geometry
+
 #version 460 core
 
 #define MAX_HEIGHT 180.f

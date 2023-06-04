@@ -1,4 +1,7 @@
 #version 460 core
+
+// ref: https://learnopengl.com/Model-Loading/Model
+
 layout (location = 0) in vec3 aPos;
 
 out vec3 WorldPos;

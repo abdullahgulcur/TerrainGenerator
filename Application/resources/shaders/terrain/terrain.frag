@@ -1,11 +1,19 @@
+// Copyright (c) Abdullah Gulcur 2022-2023
+// 
+// This project is licensed under the terms of the MIT license.
+// For a copy, see <https://opensource.org/licenses/MIT>.
+
+// Terrain Fragment Shader
+
+// REFERENCES
+// Procedural shader splatting. Reference : https://media.contentapi.ea.com/content/dam/eacom/frostbite/files/chapter5-andersson-terrain-rendering-in-frostbite.pdf
+
 #version 460 core
 
 in vec3 WorldPos;
 in vec3 Normal;
 in vec2 TexCoords;
 in mat3 TBN;
-//in vec3 TangentViewPos;
-//in vec3 TangentFragPos;
 in vec3 debugColor;
 
 out vec4 FragColor;
@@ -16,7 +24,7 @@ uniform vec3 camPos;
 
 uniform samplerCube irradianceMap;
 
-///// LIGHT EMISSION !!!!!!!
+// TODO: ADD LIGHT EMISSION
 
 // Extra color
 uniform sampler2D macroTexture;

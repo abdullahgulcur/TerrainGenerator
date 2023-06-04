@@ -36,6 +36,7 @@ namespace Core {
 		glDeleteVertexArrays(1, &smallSquareVAO);
 		glDeleteVertexArrays(1, &outerDegenerateVAO);
 		glDeleteVertexArrays(1, &interiorTrimVAO);
+		glDeleteProgram(terrainProgramID);
 
 		for (int i = 0; i < CLIPMAP_LEVEL; i++)
 			delete[] heightmapStack[i];
@@ -110,6 +111,12 @@ namespace Core {
 		unsigned char* heightmap = Terrain::resizeHeightmap(data, w);
 		unsigned char** heightMapList = Terrain::createMipmaps(heightmap, w * MEM_TILE_ONE_SIDE, CLIPMAP_LEVEL);
 		Terrain::createHeightmapStack(heightMapList, w * MEM_TILE_ONE_SIDE);
+
+		for (int i = 0; i < CLIPMAP_LEVEL; i++)
+			delete[] heightMapList[i];
+		delete[] heightMapList;
+		delete[] heightmap;
+		delete[] data;
 	}
 
 	/*

@@ -29,10 +29,10 @@ namespace Core {
 		GlewContext* glew = CoreContext::instance->glewContext;
 		Renderer* renderer = CoreContext::instance->renderer;
 
-		int equirectangularToCubemapShaderProgramId = Shader::loadShaders("resources/shaders/cubemap.vert", "resources/shaders/equirectangular_to_cubemap.frag");
-		int irradianceShaderProgramId = Shader::loadShaders("resources/shaders/cubemap.vert", "resources/shaders/irradiance_convolution.frag");
-		int prefilterShaderProgramId = Shader::loadShaders("resources/shaders/cubemap.vert", "resources/shaders/prefilter.frag");
-		int brdfShaderProgramId = Shader::loadShaders("resources/shaders/brdf.vert", "resources/shaders/brdf.frag");
+		int equirectangularToCubemapShaderProgramId = Shader::loadShaders("resources/shaders/cubemap/cubemap.vert", "resources/shaders/cubemap/equirectangular_to_cubemap.frag");
+		int irradianceShaderProgramId = Shader::loadShaders("resources/shaders/cubemap/cubemap.vert", "resources/shaders/cubemap/irradiance_convolution.frag");
+		int prefilterShaderProgramId = Shader::loadShaders("resources/shaders/cubemap/cubemap.vert", "resources/shaders/cubemap/prefilter.frag");
+		int brdfShaderProgramId = Shader::loadShaders("resources/shaders/cubemap/brdf.vert", "resources/shaders/cubemap/brdf.frag");
 
 		unsigned int backgroundShaderProgramId = CoreContext::instance->renderer->backgroundShaderProgramId;
 

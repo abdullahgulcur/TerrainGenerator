@@ -12,10 +12,9 @@ namespace Core {
 
 	void Renderer::init() {
 
-		backgroundShaderProgramId = Shader::loadShaders("resources/shaders/background.vert", "resources/shaders/background.frag");
-		defaultPbrShaderProgramId = Shader::loadShaders("resources/shaders/pbr.vert", "resources/shaders/pbr.frag");
-		alphaBlendedPbrShaderProgramId = Shader::loadShaders("resources/shaders/pbr_alpha_clipped.vert", "resources/shaders/pbr_alpha_clipped.frag");
-		lineShaderProgramId = Shader::loadShaders("resources/shaders/line.vert", "resources/shaders/line.frag");
+		backgroundShaderProgramId = Shader::loadShaders("resources/shaders/cubemap/background.vert", "resources/shaders/cubemap/background.frag");
+		defaultPbrShaderProgramId = Shader::loadShaders("resources/shaders/pbr/pbr.vert", "resources/shaders/pbr/pbr.frag");
+		lineShaderProgramId = Shader::loadShaders("resources/shaders/gizmo/line.vert", "resources/shaders/gizmo/line.frag");
 
 		Renderer::createEnvironmentCubeVAO();
 

@@ -1,4 +1,7 @@
 #version 460 core
+
+// ref: https://learnopengl.com/Model-Loading/Model
+
 out vec4 FragColor;
 in vec3 WorldPos;
 

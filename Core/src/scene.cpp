@@ -13,7 +13,15 @@ namespace Core {
 	Scene::~Scene() {
 
 		delete terrain;
-		delete cubemap;
+		glDeleteVertexArrays(1, &screenQuadVAO);
+		glDeleteTextures(1, &textureBuffer);
+		glDeleteFramebuffers(1, &filterTextureBuffer);
+		glDeleteRenderbuffers(1, &RBO);
+		glDeleteRenderbuffers(1, &filterRBO);
+		glDeleteFramebuffers(1, &FBO);
+		glDeleteFramebuffers(1, &filterFBO);
+		glDeleteProgram(framebufferProgramID);
+		glDeleteProgram(filterFramebufferProgramID);
 	}
 
 	void Scene::start() {
