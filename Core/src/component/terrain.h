@@ -89,8 +89,8 @@ namespace Core {
 		unsigned int albedo4;
 		unsigned int albedo5;
 		unsigned int albedo6;
-		unsigned int albedo7;
-		unsigned int albedo8;
+		//unsigned int albedo9;
+		//unsigned int albedo10;
 
 		/* Terrain normal textures */
 		unsigned int normal0;
@@ -102,7 +102,8 @@ namespace Core {
 		unsigned int normal6;
 		unsigned int normal7;
 		unsigned int normal8;
-		unsigned int normal9;
+		//unsigned int normal9;
+		//unsigned int normal10;
 
 		/* For the geometry */
 		unsigned int blockVAO;
@@ -174,8 +175,8 @@ namespace Core {
 		float scale_color8_dist0 = 0.80f;
 		float scale_color8_dist1 = 0.05f;
 
-		float scale_color9_dist0 = 0.80f;
-		float scale_color9_dist1 = 0.05f;
+		//float scale_color9_dist0 = 0.80f;
+		//float scale_color9_dist1 = 0.05f;
 
 		glm::vec3 color0;
 		glm::vec3 color1;
@@ -184,8 +185,14 @@ namespace Core {
 		float macroScale_1 = 0.06f;
 		float macroScale_2 = 0.005f;
 		float macroPower = 6.0f;
-		float macroAmount = 6.25f;
+		//float macroAmount = 6.25f;
 		float macroOpacity = 2.25f;
+
+		float macroAmountLayer0 = 6.25f;
+		float macroAmountLayer1 = 6.25f;
+		float macroAmountLayer2 = 6.25f;
+		float macroAmountLayer3 = 6.25f;
+		float macroAmountLayer4 = 6.25f;
 
 		float overlayBlendScale0 = 0.165f;
 		float overlayBlendAmount0 = 0.63f;
@@ -211,14 +218,14 @@ namespace Core {
 		float slopeSharpness1 = 0.08f;
 		float slopeSharpness2 = 0.08f;
 
-		float slopeBias0 = 0.922f;
-		float slopeBias1 = 0.904f;
-		float slopeBias2 = 0.904f;
+		float slopeBias0 = 0.96f;
+		float slopeBias1 = 0.89f;
+		float slopeBias2 = 0.84f;
 
-		float heightBias0 = 15;
-		float heightSharpness0 = 7;
-		float heightBias1 = 135;
-		float heightSharpness1 = 5;
+		float heightBias0 = 135;
+		float heightSharpness0 = 2;
+		//float heightBias1 = 135;
+		//float heightSharpness1 = 5;
 
 		bool showBounds = false;
 

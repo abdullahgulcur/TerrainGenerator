@@ -264,8 +264,8 @@ namespace Core {
 		colorScaleNode->append_attribute(doc.allocate_attribute("scale_color7_dist1", doc.allocate_string(std::to_string(terrain->scale_color7_dist1).c_str())));
 		colorScaleNode->append_attribute(doc.allocate_attribute("scale_color8_dist0", doc.allocate_string(std::to_string(terrain->scale_color8_dist0).c_str())));
 		colorScaleNode->append_attribute(doc.allocate_attribute("scale_color8_dist1", doc.allocate_string(std::to_string(terrain->scale_color8_dist1).c_str())));
-		colorScaleNode->append_attribute(doc.allocate_attribute("scale_color9_dist0", doc.allocate_string(std::to_string(terrain->scale_color9_dist0).c_str())));
-		colorScaleNode->append_attribute(doc.allocate_attribute("scale_color9_dist1", doc.allocate_string(std::to_string(terrain->scale_color9_dist1).c_str())));
+		//colorScaleNode->append_attribute(doc.allocate_attribute("scale_color9_dist0", doc.allocate_string(std::to_string(terrain->scale_color9_dist0).c_str())));
+		//colorScaleNode->append_attribute(doc.allocate_attribute("scale_color9_dist1", doc.allocate_string(std::to_string(terrain->scale_color9_dist1).c_str())));
 		terrainNode->append_node(colorScaleNode);
 
 		rapidxml::xml_node<>* macroNode = doc.allocate_node(rapidxml::node_element, "Macro");
@@ -273,8 +273,13 @@ namespace Core {
 		macroNode->append_attribute(doc.allocate_attribute("macroScale_1", doc.allocate_string(std::to_string(terrain->macroScale_1).c_str())));
 		macroNode->append_attribute(doc.allocate_attribute("macroScale_2", doc.allocate_string(std::to_string(terrain->macroScale_2).c_str())));
 		macroNode->append_attribute(doc.allocate_attribute("macroPower", doc.allocate_string(std::to_string(terrain->macroPower).c_str())));
-		macroNode->append_attribute(doc.allocate_attribute("macroAmount", doc.allocate_string(std::to_string(terrain->macroAmount).c_str())));
+		//macroNode->append_attribute(doc.allocate_attribute("macroAmount", doc.allocate_string(std::to_string(terrain->macroAmount).c_str())));
 		macroNode->append_attribute(doc.allocate_attribute("macroOpacity", doc.allocate_string(std::to_string(terrain->macroOpacity).c_str())));
+		macroNode->append_attribute(doc.allocate_attribute("macroAmountLayer0", doc.allocate_string(std::to_string(terrain->macroAmountLayer0).c_str())));
+		macroNode->append_attribute(doc.allocate_attribute("macroAmountLayer1", doc.allocate_string(std::to_string(terrain->macroAmountLayer1).c_str())));
+		macroNode->append_attribute(doc.allocate_attribute("macroAmountLayer2", doc.allocate_string(std::to_string(terrain->macroAmountLayer2).c_str())));
+		macroNode->append_attribute(doc.allocate_attribute("macroAmountLayer3", doc.allocate_string(std::to_string(terrain->macroAmountLayer3).c_str())));
+		macroNode->append_attribute(doc.allocate_attribute("macroAmountLayer4", doc.allocate_string(std::to_string(terrain->macroAmountLayer4).c_str())));
 		terrainNode->append_node(macroNode);
 
 		rapidxml::xml_node<>* overlayNode = doc.allocate_node(rapidxml::node_element, "Overlay");
@@ -321,8 +326,8 @@ namespace Core {
 		rapidxml::xml_node<>* heightNode = doc.allocate_node(rapidxml::node_element, "Height");
 		heightNode->append_attribute(doc.allocate_attribute("heightBias0", doc.allocate_string(std::to_string(terrain->heightBias0).c_str())));
 		heightNode->append_attribute(doc.allocate_attribute("heightSharpness0", doc.allocate_string(std::to_string(terrain->heightSharpness0).c_str())));
-		heightNode->append_attribute(doc.allocate_attribute("heightBias1", doc.allocate_string(std::to_string(terrain->heightBias1).c_str())));
-		heightNode->append_attribute(doc.allocate_attribute("heightSharpness1", doc.allocate_string(std::to_string(terrain->heightSharpness1).c_str())));
+		//heightNode->append_attribute(doc.allocate_attribute("heightBias1", doc.allocate_string(std::to_string(terrain->heightBias1).c_str())));
+		//heightNode->append_attribute(doc.allocate_attribute("heightSharpness1", doc.allocate_string(std::to_string(terrain->heightSharpness1).c_str())));
 		terrainNode->append_node(heightNode);
 
 		rapidxml::xml_node<>* debugNode = doc.allocate_node(rapidxml::node_element, "Debug");
@@ -386,16 +391,21 @@ namespace Core {
 		terrain->scale_color7_dist1 = atof(colorScaleNode->first_attribute("scale_color7_dist1")->value());
 		terrain->scale_color8_dist0 = atof(colorScaleNode->first_attribute("scale_color8_dist0")->value());
 		terrain->scale_color8_dist1 = atof(colorScaleNode->first_attribute("scale_color8_dist1")->value());
-		terrain->scale_color9_dist0 = atof(colorScaleNode->first_attribute("scale_color9_dist0")->value());
-		terrain->scale_color9_dist1 = atof(colorScaleNode->first_attribute("scale_color9_dist1")->value());
+		//terrain->scale_color9_dist0 = atof(colorScaleNode->first_attribute("scale_color9_dist0")->value());
+		//terrain->scale_color9_dist1 = atof(colorScaleNode->first_attribute("scale_color9_dist1")->value());
 
 		rapidxml::xml_node<>* macroNode = terrainNode->first_node("Macro");
 		terrain->macroScale_0 = atof(macroNode->first_attribute("macroScale_0")->value());
 		terrain->macroScale_1 = atof(macroNode->first_attribute("macroScale_1")->value());
 		terrain->macroScale_2 = atof(macroNode->first_attribute("macroScale_2")->value());
 		terrain->macroPower = atof(macroNode->first_attribute("macroPower")->value());
-		terrain->macroAmount = atof(macroNode->first_attribute("macroAmount")->value());
+		//terrain->macroAmount = atof(macroNode->first_attribute("macroAmount")->value());
 		terrain->macroOpacity = atof(macroNode->first_attribute("macroOpacity")->value());
+		terrain->macroAmountLayer0 = atof(macroNode->first_attribute("macroAmountLayer0")->value());
+		terrain->macroAmountLayer1 = atof(macroNode->first_attribute("macroAmountLayer1")->value());
+		terrain->macroAmountLayer2 = atof(macroNode->first_attribute("macroAmountLayer2")->value());
+		terrain->macroAmountLayer3 = atof(macroNode->first_attribute("macroAmountLayer3")->value());
+		terrain->macroAmountLayer4 = atof(macroNode->first_attribute("macroAmountLayer4")->value());
 
 		rapidxml::xml_node<>* overlayNode = terrainNode->first_node("Overlay");
 		terrain->overlayBlendScale0 = atof(overlayNode->first_attribute("overlayBlendScale0")->value());
@@ -426,8 +436,8 @@ namespace Core {
 		rapidxml::xml_node<>* heightNode = terrainNode->first_node("Height");
 		terrain->heightBias0 = atof(heightNode->first_attribute("heightBias0")->value());
 		terrain->heightSharpness0 = atof(heightNode->first_attribute("heightSharpness0")->value());
-		terrain->heightBias1 = atof(heightNode->first_attribute("heightBias1")->value());
-		terrain->heightSharpness1 = atof(heightNode->first_attribute("heightSharpness1")->value());
+		//terrain->heightBias1 = atof(heightNode->first_attribute("heightBias1")->value());
+		//terrain->heightSharpness1 = atof(heightNode->first_attribute("heightSharpness1")->value());
 
 		rapidxml::xml_node<>* debugNode = terrainNode->first_node("Debug");
 		terrain->showBounds = (bool)atoi(debugNode->first_attribute("showBounds")->value());

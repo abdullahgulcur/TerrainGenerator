@@ -510,10 +510,10 @@ namespace Editor {
 			ImGui::SameLine(); ImGui::TextColored(DEFAULT_TEXT_COLOR, "F"); ImGui::SameLine(); ImGui::PushItemWidth(itemWidth);
 			ImGui::DragFloat("##scale_color8_dist1", &terrain->scale_color8_dist1, 0.0001f, 0.0f, 1.0f, "%.4f");
 
-			ImGui::TextColored(DEFAULT_TEXT_COLOR, "Color 9  N"); ImGui::SameLine(); ImGui::PushItemWidth(itemWidth);
-			ImGui::DragFloat("##scale_color9_dist0", &terrain->scale_color9_dist0, 0.01f, 0.0f, 1.0f, "%.2f");
-			ImGui::SameLine(); ImGui::TextColored(DEFAULT_TEXT_COLOR, "F"); ImGui::SameLine(); ImGui::PushItemWidth(itemWidth);
-			ImGui::DragFloat("##scale_color9_dist1", &terrain->scale_color9_dist1, 0.0001f, 0.0f, 1.0f, "%.4f");
+			//ImGui::TextColored(DEFAULT_TEXT_COLOR, "Color 9  N"); ImGui::SameLine(); ImGui::PushItemWidth(itemWidth);
+			//ImGui::DragFloat("##scale_color9_dist0", &terrain->scale_color9_dist0, 0.01f, 0.0f, 1.0f, "%.2f");
+			//ImGui::SameLine(); ImGui::TextColored(DEFAULT_TEXT_COLOR, "F"); ImGui::SameLine(); ImGui::PushItemWidth(itemWidth);
+			//ImGui::DragFloat("##scale_color9_dist1", &terrain->scale_color9_dist1, 0.0001f, 0.0f, 1.0f, "%.4f");
 
 			ImGui::Separator();
 
@@ -547,8 +547,19 @@ namespace Editor {
 
 			itemWidth = (width - 180) * 0.33f;
 
-			ImGui::TextColored(DEFAULT_TEXT_COLOR, "Amount"); ImGui::PushItemWidth(itemWidth);
-			ImGui::SameLine(); ImGui::DragFloat("##macroAmount", &terrain->macroAmount, 0.01f, 0.0f, 10.0f, "%.2f");
+			//ImGui::TextColored(DEFAULT_TEXT_COLOR, "Amount"); ImGui::PushItemWidth(itemWidth);
+			//ImGui::SameLine(); ImGui::DragFloat("##macroAmount", &terrain->macroAmount, 0.01f, 0.0f, 10.0f, "%.2f");
+
+			ImGui::TextColored(DEFAULT_TEXT_COLOR, "Amount0"); ImGui::PushItemWidth(itemWidth);
+			ImGui::SameLine(); ImGui::DragFloat("##macroAmountLayer0", &terrain->macroAmountLayer0, 0.01f, 0.0f, 10.0f, "%.2f");
+			ImGui::TextColored(DEFAULT_TEXT_COLOR, "Amount1"); ImGui::PushItemWidth(itemWidth);
+			ImGui::SameLine(); ImGui::DragFloat("##macroAmountLayer1", &terrain->macroAmountLayer1, 0.01f, 0.0f, 10.0f, "%.2f");
+			ImGui::TextColored(DEFAULT_TEXT_COLOR, "Amount2"); ImGui::PushItemWidth(itemWidth);
+			ImGui::SameLine(); ImGui::DragFloat("##macroAmountLayer2", &terrain->macroAmountLayer2, 0.01f, 0.0f, 10.0f, "%.2f");
+			ImGui::TextColored(DEFAULT_TEXT_COLOR, "Amount3"); ImGui::PushItemWidth(itemWidth);
+			ImGui::SameLine(); ImGui::DragFloat("##macroAmountLayer3", &terrain->macroAmountLayer3, 0.01f, 0.0f, 10.0f, "%.2f");
+			ImGui::TextColored(DEFAULT_TEXT_COLOR, "Amount4"); ImGui::PushItemWidth(itemWidth);
+			ImGui::SameLine(); ImGui::DragFloat("##macroAmountLayer4", &terrain->macroAmountLayer4, 0.01f, 0.0f, 10.0f, "%.2f");
 
 			ImGui::SameLine(); ImGui::TextColored(DEFAULT_TEXT_COLOR, "Power"); ImGui::PushItemWidth(itemWidth);
 			ImGui::SameLine(); ImGui::DragFloat("##macroPower", &terrain->macroPower, 0.01f, 0.0f, 10.0f, "%.2f");
@@ -628,10 +639,10 @@ namespace Editor {
 			ImGui::SameLine(); ImGui::TextColored(DEFAULT_TEXT_COLOR, "Soft"); ImGui::PushItemWidth(itemWidth);
 			ImGui::SameLine(); ImGui::DragFloat("##heightSharpness0", &terrain->heightSharpness0, 0.01f, 0.0f, 100.0f, "%.2f");
 
-			ImGui::TextColored(DEFAULT_TEXT_COLOR, "Transition 1  Bias"); ImGui::PushItemWidth(itemWidth);
-			ImGui::SameLine(); ImGui::DragFloat("##heightBias1", &terrain->heightBias1, 0.01f, 0.0f, 1.0f, "%.2f");
-			ImGui::SameLine(); ImGui::TextColored(DEFAULT_TEXT_COLOR, "Soft"); ImGui::PushItemWidth(itemWidth);
-			ImGui::SameLine(); ImGui::DragFloat("##heightSharpness1", &terrain->heightSharpness1, 0.01f, 0.0f, 100.0f, "%.2f");
+			//ImGui::TextColored(DEFAULT_TEXT_COLOR, "Transition 1  Bias"); ImGui::PushItemWidth(itemWidth);
+			//ImGui::SameLine(); ImGui::DragFloat("##heightBias1", &terrain->heightBias1, 0.01f, 0.0f, 1.0f, "%.2f");
+			//ImGui::SameLine(); ImGui::TextColored(DEFAULT_TEXT_COLOR, "Soft"); ImGui::PushItemWidth(itemWidth);
+			//ImGui::SameLine(); ImGui::DragFloat("##heightSharpness1", &terrain->heightSharpness1, 0.01f, 0.0f, 100.0f, "%.2f");
 
 			ImGui::Separator();
 

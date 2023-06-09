@@ -16,7 +16,7 @@
 
 #ifdef TERRAIN_INSTANCED_RENDERING
 
-layout (location = 0) in vec2 aPos;
+layout (location = 0) in vec2 position;
 layout (location = 1) in vec2 position_instance;
 layout (location = 2) in float level_instance;
 layout (location = 3) in mat4 model_instance;
@@ -41,7 +41,7 @@ uniform vec3 camPos;
 void main(void)
 {
     // set position in xz plane
-    vec3 p = vec3(model_instance * vec4(aPos.x, 0, aPos.y, 1));
+    vec3 p = vec3(model_instance * vec4(position.x, 0, position.y, 1));
     float scale = pow(2, float(level_instance));
     vec3 pos = vec3(position_instance.x, 0, position_instance.y) + scale * p;
 
@@ -77,9 +77,9 @@ void main(void)
     TBN = mat3(T, B, normal);
 
     // for parallax mapping
-    vec3 T_ = normalize(vec3(2 * scale, h2 - h1, 0));
-    vec3 B_ = normalize(cross(T_,normal));
-    mat3 TBN_ = transpose(mat3(T_, B_, normal));
+//    vec3 T_ = normalize(vec3(2 * scale, h2 - h1, 0));
+//    vec3 B_ = normalize(cross(T_,normal));
+//    mat3 TBN_ = transpose(mat3(T_, B_, normal));
 
     WorldPos = pos;
     //TangentViewPos = TBN_* camPos;
