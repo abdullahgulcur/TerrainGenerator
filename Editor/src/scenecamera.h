@@ -31,8 +31,8 @@ namespace Editor {
 	private:
 
 		float rotationSpeed = 0.020;
-		float translationSpeed = 50;
-		float scrollSpeed = 20;
+		float translationSpeed = 500;
+		float scrollSpeed = 200;
 		float generalSpeed = 0.3f;
 
 		//float rotationSpeed = 0.02;

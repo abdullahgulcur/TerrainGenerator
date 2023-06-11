@@ -16,6 +16,7 @@ struct Color
     vec3 normal;
     float specular;
     float emission; // it is just for how much light is absorbed. Sometimes material color is affected by light power too much. For example snow...
+    float ao;
 };
 
 in vec3 WorldPos;
@@ -30,7 +31,7 @@ const float PI = 3.14159265359;
 
 uniform vec3 camPos;
 
-uniform samplerCube irradianceMap;
+//uniform samplerCube irradianceMap;
 
 // TODO: ADD LIGHT EMISSION
 
@@ -55,6 +56,8 @@ uniform sampler2D normalT5;
 uniform sampler2D normalT6;
 uniform sampler2D normalT7;
 uniform sampler2D normalT8;
+
+uniform sampler2D aoT0;
 
 // Snow Color
 uniform vec3 color0;
@@ -97,13 +100,9 @@ uniform	float scale_color7_dist1;
 uniform	float scale_color8_dist0;
 uniform	float scale_color8_dist1;
 
-//uniform	float scale_color9_dist0;
-//uniform	float scale_color9_dist1;
-
 uniform	float macroScale_0;
 uniform	float macroScale_1;
 uniform	float macroScale_2;
-//uniform	float macroAmount;
 uniform	float macroPower;
 uniform	float macroOpacity;
 uniform	float macroAmountLayer0;
@@ -112,25 +111,21 @@ uniform	float macroAmountLayer2;
 uniform	float macroAmountLayer3;
 uniform	float macroAmountLayer4;
 
-// MUD LAYER
 uniform	float overlayBlendScale0;
 uniform	float overlayBlendAmount0;
 uniform	float overlayBlendPower0;
 uniform	float overlayBlendOpacity0;
 
-// ROCK LAYER
 uniform	float overlayBlendScale1;
 uniform	float overlayBlendAmount1;
 uniform	float overlayBlendPower1;
 uniform	float overlayBlendOpacity1;
 
-// SNOW LAYER
 uniform	float overlayBlendScale2;
 uniform	float overlayBlendAmount2;
 uniform	float overlayBlendPower2;
 uniform	float overlayBlendOpacity2;
 
-// SNOW LAYER
 uniform	float overlayBlendScale3;
 uniform	float overlayBlendAmount3;
 uniform	float overlayBlendPower3;
@@ -146,20 +141,17 @@ uniform	float slopeBias2;
 
 uniform	float heightBias0;
 uniform	float heightSharpness0;
-//uniform	float heightBias1;
-//uniform	float heightSharpness1;
 
 uniform float distanceNear;
 uniform float fogBlendDistance;
 uniform vec3 fogColor;
 uniform float maxFog;
 
-vec3 PbrMaterialWorkflow(vec3 albedo, vec3 normal, float specular){
+vec3 PbrMaterialWorkflow(vec3 albedo, vec3 normal, float specular, float ao){
 
     albedo = pow(albedo, vec3(2.2));
     normal = normal * 2 - 1;
     vec3 N = TBN * normal;
-    float ambient = ambientAmount;
 
     vec3 lightDir = lightDirection;
     vec3 L = normalize(-lightDir);
@@ -172,13 +164,8 @@ vec3 PbrMaterialWorkflow(vec3 albedo, vec3 normal, float specular){
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), specularPower) * specular * specularAmount;
 
     vec3 Lo = (albedo / PI + spec) * radiance * NdotL;
-   
-    vec3 irradiance = texture(irradianceMap, N).rgb;
-    vec3 diffuse = irradiance * albedo;
-    
-    vec3 color = diffuse * ambient + Lo;
-
-    return color;
+    vec3 color = albedo * ambientAmount + Lo;
+    return color * vec3(ao);
 }
 
 float LinearizeDepth(float depth) 
@@ -199,8 +186,6 @@ float GetMacroValue(){
     macro *= macroOpacity;
     macro = pow(macro,macroPower);
     macro = clamp(macro,0,1);
-//    macro = mix(macro, 1, macroOpacity);
-    //macro = mix(1,2,macro);
     return mix(1,10,macro);
 }
 
@@ -216,7 +201,14 @@ float GetNoiseValue(float overlayBlendScale, float overlayBlendAmount, float ove
     return noiseVal;
 }
 
-vec3 getColorDistanceBlended(float dist0, float dist1, float distanceBlend, sampler2D textureUnit){
+vec4 getColorDistanceBlendedRGBA(float dist0, float dist1, float distanceBlend, sampler2D textureUnit){
+
+    vec4 textureUnit_dist_0 = texture(textureUnit, vec2(TexCoords * dist0)).rgba;
+    vec4 textureUnit_dist_1 = texture(textureUnit, vec2(TexCoords * dist1)).rgba;
+    return mix(textureUnit_dist_1, textureUnit_dist_0, distanceBlend);
+}
+
+vec3 getColorDistanceBlendedRGB(float dist0, float dist1, float distanceBlend, sampler2D textureUnit){
 
     vec3 textureUnit_dist_0 = texture(textureUnit, vec2(TexCoords * dist0)).rgb;
     vec3 textureUnit_dist_1 = texture(textureUnit, vec2(TexCoords * dist1)).rgb;
@@ -229,14 +221,16 @@ vec3 getColorDistanceBlended(float dist0, float dist1, float distanceBlend, samp
 */
 Color getColorDistanceBlended(float distanceBlend, float dist0, float dist1, sampler2D albedoTexture, sampler2D normalTexture){
     
-    vec3 albedo = getColorDistanceBlended(dist0, dist1, distanceBlend, albedoTexture);
-    vec3 normal = getColorDistanceBlended(dist0, dist1, distanceBlend, normalTexture);
-    float specular = clamp(albedo.r, 0, 0.5) * 0.5;
+    vec4 albedo = getColorDistanceBlendedRGBA(dist0, dist1, distanceBlend, albedoTexture);
+    vec3 normal = getColorDistanceBlendedRGB(dist0, dist1, distanceBlend, normalTexture);
+    float specular = clamp(albedo.r, 0, 0.75) * 0.75;
 
     Color color;
-    color.albedo = albedo;
+    color.albedo = albedo.rgb;
     color.normal = normal;
     color.specular = specular;
+    color.ao = albedo.a;
+
     return color;
 }
 
@@ -245,10 +239,14 @@ Color blendColors(Color color0, Color color1, float alpha){
     vec3 albedo = mix(color0.albedo, color1.albedo, alpha);
     vec3 normal = mix(color0.normal, color1.normal, alpha);
     float specular = mix(color0.specular, color1.specular, alpha);
+    float ao = mix(color0.ao, color1.ao, alpha);
+
     Color color;
     color.albedo = albedo;
     color.normal = normal;
     color.specular = specular;
+    color.ao = ao;
+
     return color;
 }
 
@@ -275,6 +273,13 @@ float getDistanceBlend(){
     return distanceBlend;
 }
 
+vec3 getColorAfterFogFilter(vec3 color){
+
+    float depth = LinearizeDepth(gl_FragCoord.z);// / 10000;
+    float fogBlend = clamp((depth - distanceNear) / fogBlendDistance + 0.5, 0, maxFog);
+    return mix(color, fogColor, fogBlend); 
+}
+
 void main(){
 
     float distanceBlend = getDistanceBlend();
@@ -289,14 +294,18 @@ void main(){
     Color c7;
     c7.albedo = color0;
     c7.specular = clamp(c7.albedo.r, 0, 0.5) * 0.5;
-    c7.normal = getColorDistanceBlended(distanceBlend, scale_color7_dist0, scale_color7_dist1, normalT7);           // snowpure 
-    
+    c7.normal = getColorDistanceBlendedRGB(distanceBlend, scale_color7_dist0, scale_color7_dist1, normalT7);           // snowpure 
+    c7.ao = 1.f;
+
     Color c8;
     c8.albedo = color1;
     c8.specular = clamp(c8.albedo.r, 0, 0.5) * 0.5;
-    c8.normal = getColorDistanceBlended(distanceBlend, scale_color8_dist0, scale_color8_dist1, normalT8);           // snowfresh 
+    c8.normal = getColorDistanceBlendedRGB(distanceBlend, scale_color8_dist0, scale_color8_dist1, normalT8);           // snowfresh 
+    c8.ao = 1.f;
 
     Color layer0 = blendLayersWithNoise(c0, c1, overlayBlendScale0, overlayBlendAmount0, overlayBlendPower0, overlayBlendOpacity0); // grass
+    //Color layer0 = blendLayersWithNoise(c7, c8, overlayBlendScale3, overlayBlendAmount3, overlayBlendPower3, overlayBlendOpacity3); // snow
+
     Color layer1 = blendLayersWithNoise(c2, c3, overlayBlendScale1, overlayBlendAmount1, overlayBlendPower1, overlayBlendOpacity1); // mud
     Color layer2 = c4;                                                                                                              // stone
     Color layer3 = blendLayersWithNoise(c5, c6, overlayBlendScale2, overlayBlendAmount2, overlayBlendPower2, overlayBlendOpacity2); // cliff
@@ -312,7 +321,7 @@ void main(){
     // SLOPES AND HEIGHTS
     float worldSpaceSlope = dot(Normal, vec3(0,1,0));
     float slopeBlend1 = getSlopeBlend(layer1.normal, worldSpaceSlope, slopeBias0, slopeSharpness0);
-    float slopeBlend2 = getSlopeBlend(layer2.normal, worldSpaceSlope, slopeBias1, slopeSharpness1);
+    float slopeBlend2 = getSlopeBlend(layer3.normal, worldSpaceSlope, slopeBias1, slopeSharpness1); // layer2: store, layer3: cliff
     float slopeBlend3 = getSlopeBlend(layer3.normal, worldSpaceSlope, slopeBias2, slopeSharpness2);
     float heightBlend0 = clamp((WorldPos.y - heightBias0) / heightSharpness0 + 0.5, 0, 1);
 
@@ -321,13 +330,8 @@ void main(){
     final = blendColors(final, layer2, slopeBlend2);
     final = blendColors(final, layer3, slopeBlend3);
 
-    // ---- EDITED PBR
-    vec3 color = PbrMaterialWorkflow(final.albedo, final.normal, final.specular);
-
-    // ---- FOG
-    float depth = LinearizeDepth(gl_FragCoord.z);// / 10000;
-    float fogBlend = clamp((depth - distanceNear) / fogBlendDistance + 0.5, 0, maxFog);
-    color = mix(color, fogColor, fogBlend); 
+    vec3 color = PbrMaterialWorkflow(final.albedo, final.normal, final.specular, final.ao);
+    color = getColorAfterFogFilter(color);
 
     // ---- GAMMA CORRECT
     color = pow(color, vec3(1.0/2.2));

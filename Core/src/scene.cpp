@@ -352,7 +352,9 @@ namespace Core {
 		terrain->fogColor.r = atof(fogNode->first_attribute("color_r")->value());
 		terrain->fogColor.g = atof(fogNode->first_attribute("color_g")->value());
 		terrain->fogColor.b = atof(fogNode->first_attribute("color_b")->value());
-		
+		terrain->distanceNear = atof(fogNode->first_attribute("distanceNear")->value());
+		terrain->fogBlendDistance = atof(fogNode->first_attribute("fogBlendDistance")->value());
+
 		rapidxml::xml_node<>* color0Node = terrainNode->first_node("Color0");
 		terrain->color0.r = atof(color0Node->first_attribute("color_r")->value());
 		terrain->color0.g = atof(color0Node->first_attribute("color_g")->value());

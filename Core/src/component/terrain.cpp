@@ -45,6 +45,25 @@ namespace Core {
 		for (int i = 0; i < CLIPMAP_LEVEL; i++)
 			delete[] lowResolustionHeightmapStack[i];
 		delete[] lowResolustionHeightmapStack;
+
+		glDeleteTextures(1, &albedo0);
+		glDeleteTextures(1, &albedo1);
+		glDeleteTextures(1, &albedo2);
+		glDeleteTextures(1, &albedo3);
+		glDeleteTextures(1, &albedo4);
+		glDeleteTextures(1, &albedo5);
+		glDeleteTextures(1, &albedo6);
+		glDeleteTextures(1, &normal0);
+		glDeleteTextures(1, &normal1);
+		glDeleteTextures(1, &normal2);
+		glDeleteTextures(1, &normal3);
+		glDeleteTextures(1, &normal4);
+		glDeleteTextures(1, &normal5);
+		glDeleteTextures(1, &normal6);
+		glDeleteTextures(1, &normal7);
+		glDeleteTextures(1, &normal8);
+		glDeleteTextures(1, &macroTexture);
+		glDeleteTextures(1, &noiseTexture);
 	}
 
 	void Terrain::start() {
@@ -52,7 +71,7 @@ namespace Core {
 		// limit camera position to the remapped terrain region
 		cameraPosition = glm::clamp(CoreContext::instance->scene->cameraInfo.camPos, glm::vec3(MAP_SIZE * 2 + 1, 0, MAP_SIZE * 2 + 1), glm::vec3(MAP_SIZE * 3 - 1, 0, MAP_SIZE * 3 - 1));
 
-		Terrain::initHeightmapStack("resources/textures/terrain/terrain.png");
+		Terrain::initHeightmapStack("resources/textures/terrain/heightmap.png");
 		Terrain::createLowResolutionHeightmapStack();
 		Terrain::generateTerrainClipmapsVertexArrays();
 		Terrain::initShaders("resources/shaders/terrain/terrain.vert", "resources/shaders/terrain/terrain.frag");
@@ -67,25 +86,25 @@ namespace Core {
 		terrainProgramID = Shader::loadShaders(vertexShader, fragShader);
 		glUseProgram(terrainProgramID);
 		glUniform1i(glGetUniformLocation(terrainProgramID, "heightmapArray"), 0);
-		glUniform1i(glGetUniformLocation(terrainProgramID, "irradianceMap"), 1);
-		glUniform1i(glGetUniformLocation(terrainProgramID, "macroTexture"), 2);
-		glUniform1i(glGetUniformLocation(terrainProgramID, "noiseTexture"), 3);
-		glUniform1i(glGetUniformLocation(terrainProgramID, "albedoT0"), 4);
-		glUniform1i(glGetUniformLocation(terrainProgramID, "albedoT1"), 5);
-		glUniform1i(glGetUniformLocation(terrainProgramID, "albedoT2"), 6);
-		glUniform1i(glGetUniformLocation(terrainProgramID, "albedoT3"), 7);
-		glUniform1i(glGetUniformLocation(terrainProgramID, "albedoT4"), 8);
-		glUniform1i(glGetUniformLocation(terrainProgramID, "albedoT5"), 9);
-		glUniform1i(glGetUniformLocation(terrainProgramID, "albedoT6"), 10);
-		glUniform1i(glGetUniformLocation(terrainProgramID, "normalT0"), 11);
-		glUniform1i(glGetUniformLocation(terrainProgramID, "normalT1"), 12);
-		glUniform1i(glGetUniformLocation(terrainProgramID, "normalT2"), 13);
-		glUniform1i(glGetUniformLocation(terrainProgramID, "normalT3"), 14);
-		glUniform1i(glGetUniformLocation(terrainProgramID, "normalT4"), 15);
-		glUniform1i(glGetUniformLocation(terrainProgramID, "normalT5"), 16);
-		glUniform1i(glGetUniformLocation(terrainProgramID, "normalT6"), 17);
-		glUniform1i(glGetUniformLocation(terrainProgramID, "normalT7"), 18);
-		glUniform1i(glGetUniformLocation(terrainProgramID, "normalT8"), 19);
+		//glUniform1i(glGetUniformLocation(terrainProgramID, "irradianceMap"), 1);
+		glUniform1i(glGetUniformLocation(terrainProgramID, "macroTexture"), 1);
+		glUniform1i(glGetUniformLocation(terrainProgramID, "noiseTexture"), 2);
+		glUniform1i(glGetUniformLocation(terrainProgramID, "albedoT0"), 3);
+		glUniform1i(glGetUniformLocation(terrainProgramID, "albedoT1"), 4);
+		glUniform1i(glGetUniformLocation(terrainProgramID, "albedoT2"), 5);
+		glUniform1i(glGetUniformLocation(terrainProgramID, "albedoT3"), 6);
+		glUniform1i(glGetUniformLocation(terrainProgramID, "albedoT4"), 7);
+		glUniform1i(glGetUniformLocation(terrainProgramID, "albedoT5"), 8);
+		glUniform1i(glGetUniformLocation(terrainProgramID, "albedoT6"), 9);
+		glUniform1i(glGetUniformLocation(terrainProgramID, "normalT0"), 10);
+		glUniform1i(glGetUniformLocation(terrainProgramID, "normalT1"), 11);
+		glUniform1i(glGetUniformLocation(terrainProgramID, "normalT2"), 12);
+		glUniform1i(glGetUniformLocation(terrainProgramID, "normalT3"), 13);
+		glUniform1i(glGetUniformLocation(terrainProgramID, "normalT4"), 14);
+		glUniform1i(glGetUniformLocation(terrainProgramID, "normalT5"), 15);
+		glUniform1i(glGetUniformLocation(terrainProgramID, "normalT6"), 16);
+		glUniform1i(glGetUniformLocation(terrainProgramID, "normalT7"), 17);
+		glUniform1i(glGetUniformLocation(terrainProgramID, "normalT8"), 18);
 	}
 
 	void Terrain::initBlockAABBs() {
@@ -453,26 +472,78 @@ namespace Core {
 
 		std::map<std::string, Texture*>& textures = CoreContext::instance->fileSystem->textures;
 
-		albedo0 = textures.at("grasslawn_a")->textureId;
-		albedo1 = textures.at("grasswild_a")->textureId;
-		albedo2 = textures.at("soilmulch_a")->textureId;
-		albedo3 = textures.at("groundforest_a")->textureId;
-		albedo4 = textures.at("groundsandy_a")->textureId;
-		albedo5 = textures.at("cliffgranite_a")->textureId;
-		albedo6 = textures.at("lichenedrock_a")->textureId;
+		Texture* T0 = Texture::mergeTextures(textures.at("grasslawn_a"), textures.at("grasslawn_ao"), 3, 1);
+		Texture* T1 = Texture::mergeTextures(textures.at("grasswild_a"), textures.at("grasswild_ao"), 3, 1);
+		Texture* T2 = Texture::mergeTextures(textures.at("soilmulch_a"), textures.at("soilmulch_ao"), 3, 1);
+		Texture* T3 = Texture::mergeTextures(textures.at("groundforest_a"), textures.at("groundforest_ao"), 3, 1);
+		Texture* T4 = Texture::mergeTextures(textures.at("groundsandy_a"), textures.at("groundsandy_ao"), 3, 1);
+		Texture* T5 = Texture::mergeTextures(textures.at("cliffgranite_a"), textures.at("cliffgranite_ao"), 3, 1);
+		Texture* T6 = Texture::mergeTextures(textures.at("lichenedrock_a"), textures.at("lichenedrock_ao"), 3, 1);
 
-		normal0 = textures.at("grasslawn_n")->textureId;
-		normal1 = textures.at("grasswild_n")->textureId;
-		normal2 = textures.at("soilmulch_n")->textureId;
-		normal3 = textures.at("groundforest_n")->textureId;
-		normal4 = textures.at("groundsandy_n")->textureId;
-		normal5 = textures.at("cliffgranite_n")->textureId;
-		normal6 = textures.at("lichenedrock_n")->textureId;
-		normal7 = textures.at("snowpure_n")->textureId;
-		normal8 = textures.at("snowfresh_n")->textureId;
+		albedo0 = T0->loadToGPU();
+		albedo1 = T1->loadToGPU();
+		albedo2 = T2->loadToGPU();
+		albedo3 = T3->loadToGPU();
+		albedo4 = T4->loadToGPU();
+		albedo5 = T5->loadToGPU();
+		albedo6 = T6->loadToGPU();
 
-		macroTexture = textures.at("gold_a")->textureId;
-		noiseTexture = textures.at("noiseTexture")->textureId;
+		delete T0;
+		delete T1;
+		delete T2;
+		delete T3;
+		delete T4;
+		delete T5;
+		delete T6;
+
+		Texture* T0_n = textures.at("grasslawn_n");
+		Texture* T1_n = textures.at("grasswild_n");
+		Texture* T2_n = textures.at("soilmulch_n");
+		Texture* T3_n = textures.at("groundforest_n");
+		Texture* T4_n = textures.at("groundsandy_n");
+		Texture* T5_n = textures.at("cliffgranite_n");
+		Texture* T6_n = textures.at("lichenedrock_n");
+		Texture* T7_n = textures.at("snowpure_n");
+		Texture* T8_n = textures.at("snowfresh_n");
+
+		normal0 = T0_n->loadToGPU();
+		normal1 = T1_n->loadToGPU();
+		normal2 = T2_n->loadToGPU();
+		normal3 = T3_n->loadToGPU();
+		normal4 = T4_n->loadToGPU();
+		normal5 = T5_n->loadToGPU();
+		normal6 = T6_n->loadToGPU();
+		normal7 = T7_n->loadToGPU();
+		normal8 = T8_n->loadToGPU();
+
+		Texture* macro = textures.at("gold_a");
+		Texture* noise = textures.at("noiseTexture");
+
+		macroTexture = macro->loadToGPU();
+		noiseTexture = noise->loadToGPU();
+
+		//albedo0 = textures.at("grasslawn_a")->textureId;
+		//albedo1 = textures.at("grasswild_a")->textureId;
+		//albedo2 = textures.at("soilmulch_a")->textureId;
+		//albedo3 = textures.at("groundforest_a")->textureId;
+		//albedo4 = textures.at("groundsandy_a")->textureId;
+		//albedo5 = textures.at("cliffgranite_a")->textureId;
+		//albedo6 = textures.at("lichenedrock_a")->textureId;
+
+		//normal0 = textures.at("grasslawn_n")->textureId;
+		//normal1 = textures.at("grasswild_n")->textureId;
+		//normal2 = textures.at("soilmulch_n")->textureId;
+		//normal3 = textures.at("groundforest_n")->textureId;
+		//normal4 = textures.at("groundsandy_n")->textureId;
+		//normal5 = textures.at("cliffgranite_n")->textureId;
+		//normal6 = textures.at("lichenedrock_n")->textureId;
+		//normal7 = textures.at("snowpure_n")->textureId;
+		//normal8 = textures.at("snowfresh_n")->textureId;
+
+		//ao0 = textures.at("cliffgranite_ao")->textureId;
+
+		//macroTexture = textures.at("gold_a")->textureId;
+		//noiseTexture = textures.at("noiseTexture")->textureId;
 	}
 
 	/*
@@ -755,45 +826,45 @@ namespace Core {
 
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D_ARRAY, elevationMapTextureArray);
+		//glActiveTexture(GL_TEXTURE1);
+		//glBindTexture(GL_TEXTURE_CUBE_MAP, cubemap->irradianceMap);
 		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_CUBE_MAP, cubemap->irradianceMap);
-		glActiveTexture(GL_TEXTURE2);
 		glBindTexture(GL_TEXTURE_2D, macroTexture);
-		glActiveTexture(GL_TEXTURE3);
+		glActiveTexture(GL_TEXTURE2);
 		glBindTexture(GL_TEXTURE_2D, noiseTexture);
 		
-		glActiveTexture(GL_TEXTURE4);
+		glActiveTexture(GL_TEXTURE3);
 		glBindTexture(GL_TEXTURE_2D, albedo0);
-		glActiveTexture(GL_TEXTURE5);
+		glActiveTexture(GL_TEXTURE4);
 		glBindTexture(GL_TEXTURE_2D, albedo1);
-		glActiveTexture(GL_TEXTURE6);
+		glActiveTexture(GL_TEXTURE5);
 		glBindTexture(GL_TEXTURE_2D, albedo2);
-		glActiveTexture(GL_TEXTURE7);
+		glActiveTexture(GL_TEXTURE6);
 		glBindTexture(GL_TEXTURE_2D, albedo3);
-		glActiveTexture(GL_TEXTURE8);
+		glActiveTexture(GL_TEXTURE7);
 		glBindTexture(GL_TEXTURE_2D, albedo4);
-		glActiveTexture(GL_TEXTURE9);
+		glActiveTexture(GL_TEXTURE8);
 		glBindTexture(GL_TEXTURE_2D, albedo5);
-		glActiveTexture(GL_TEXTURE10);
+		glActiveTexture(GL_TEXTURE9);
 		glBindTexture(GL_TEXTURE_2D, albedo6);
 
-		glActiveTexture(GL_TEXTURE11);
+		glActiveTexture(GL_TEXTURE10);
 		glBindTexture(GL_TEXTURE_2D, normal0);
-		glActiveTexture(GL_TEXTURE12);
+		glActiveTexture(GL_TEXTURE11);
 		glBindTexture(GL_TEXTURE_2D, normal1);
-		glActiveTexture(GL_TEXTURE13);
+		glActiveTexture(GL_TEXTURE12);
 		glBindTexture(GL_TEXTURE_2D, normal2);
-		glActiveTexture(GL_TEXTURE14);
+		glActiveTexture(GL_TEXTURE13);
 		glBindTexture(GL_TEXTURE_2D, normal3);
-		glActiveTexture(GL_TEXTURE15);
+		glActiveTexture(GL_TEXTURE14);
 		glBindTexture(GL_TEXTURE_2D, normal4);
-		glActiveTexture(GL_TEXTURE16);
+		glActiveTexture(GL_TEXTURE15);
 		glBindTexture(GL_TEXTURE_2D, normal5);
-		glActiveTexture(GL_TEXTURE17);
+		glActiveTexture(GL_TEXTURE16);
 		glBindTexture(GL_TEXTURE_2D, normal6);
-		glActiveTexture(GL_TEXTURE18);
+		glActiveTexture(GL_TEXTURE17);
 		glBindTexture(GL_TEXTURE_2D, normal7);
-		glActiveTexture(GL_TEXTURE19);
+		glActiveTexture(GL_TEXTURE18);
 		glBindTexture(GL_TEXTURE_2D, normal8);
 
 		std::vector<TerrainVertexAttribs> instanceArray;

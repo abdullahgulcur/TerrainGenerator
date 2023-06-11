@@ -786,7 +786,7 @@ namespace Editor {
 		SceneCamera* camera = EditorContext::instance->camera;
 		Scene* scene = CoreContext::instance->scene;
 
-		ImGui::Image((ImTextureID)scene->textureBuffer, content, ImVec2(0, 1), ImVec2(1, 0));
+		ImGui::Image((ImTextureID)scene->filterTextureBuffer, content, ImVec2(0, 1), ImVec2(1, 0));
 		if (ImGui::IsItemClicked(ImGuiMouseButton_Left))
 			scenePanelClicked = true;
 
