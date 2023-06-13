@@ -3,7 +3,7 @@ OpenGL terrain engine that can be used for both games and simulations.
 
 
 ### Mountain
-<img src="Screenshots/mountain.png" width = "1200" height = "650">
+![mountain](Screenshots/mountain.png)
 
 ### Snow
-<img src="Screenshots/snow.png" width = "1200" height = "650">
+![snow](Screenshots/snow.png)
