@@ -86,7 +86,6 @@ namespace Core {
 		terrainProgramID = Shader::loadShaders(vertexShader, fragShader);
 		glUseProgram(terrainProgramID);
 		glUniform1i(glGetUniformLocation(terrainProgramID, "heightmapArray"), 0);
-		//glUniform1i(glGetUniformLocation(terrainProgramID, "irradianceMap"), 1);
 		glUniform1i(glGetUniformLocation(terrainProgramID, "macroTexture"), 1);
 		glUniform1i(glGetUniformLocation(terrainProgramID, "noiseTexture"), 2);
 		glUniform1i(glGetUniformLocation(terrainProgramID, "albedoT0"), 3);
@@ -116,7 +115,7 @@ namespace Core {
 			blockAABBs[12 * CLIPMAP_LEVEL + i] = Terrain::getBlockBoundingBox(12 * CLIPMAP_LEVEL + i, 0);
 	}
 
-	void Terrain::initHeightmapStack(std::string path) {
+	void Terrain::initHeightmapStack(const std::string path) {
 
 		std::vector<unsigned char> out;
 		unsigned int w, h;
@@ -125,7 +124,7 @@ namespace Core {
 		for (int i = 0; i < out.size(); i++)
 			data[i] = out[i];
 
-		unsigned char* heightmap = Terrain::resizeHeightmap(data, w);
+		const unsigned char* const heightmap = Terrain::resizeHeightmap(data, w);
 		unsigned char** heightMapList = Terrain::createMipmaps(heightmap, w * MEM_TILE_ONE_SIDE, CLIPMAP_LEVEL);
 		Terrain::createHeightmapStack(heightMapList, w * MEM_TILE_ONE_SIDE);
 
@@ -521,49 +520,26 @@ namespace Core {
 
 		macroTexture = macro->loadToGPU();
 		noiseTexture = noise->loadToGPU();
-
-		//albedo0 = textures.at("grasslawn_a")->textureId;
-		//albedo1 = textures.at("grasswild_a")->textureId;
-		//albedo2 = textures.at("soilmulch_a")->textureId;
-		//albedo3 = textures.at("groundforest_a")->textureId;
-		//albedo4 = textures.at("groundsandy_a")->textureId;
-		//albedo5 = textures.at("cliffgranite_a")->textureId;
-		//albedo6 = textures.at("lichenedrock_a")->textureId;
-
-		//normal0 = textures.at("grasslawn_n")->textureId;
-		//normal1 = textures.at("grasswild_n")->textureId;
-		//normal2 = textures.at("soilmulch_n")->textureId;
-		//normal3 = textures.at("groundforest_n")->textureId;
-		//normal4 = textures.at("groundsandy_n")->textureId;
-		//normal5 = textures.at("cliffgranite_n")->textureId;
-		//normal6 = textures.at("lichenedrock_n")->textureId;
-		//normal7 = textures.at("snowpure_n")->textureId;
-		//normal8 = textures.at("snowfresh_n")->textureId;
-
-		//ao0 = textures.at("cliffgranite_ao")->textureId;
-
-		//macroTexture = textures.at("gold_a")->textureId;
-		//noiseTexture = textures.at("noiseTexture")->textureId;
 	}
 
 	/*
 	* Heightmap is resized according to the structure below in the function (in the comments).
 	* We have to do this in order to work with high level clipmaps.
 	*/
-	unsigned char* Terrain::resizeHeightmap(unsigned char* heightmap, int size) {
+	unsigned char* Terrain::resizeHeightmap(const unsigned char* heightmap, int size) {
 
 		// Resize Structure
 		// 0 0 0 0
 		// 0 0 1 0
 		// 0 0 0 0
 		// 0 0 0 0
-		int totalSize = size * size * 4 * 4 * TERRAIN_STACK_NUM_CHANNELS;
-		unsigned char* remappedHeightmap = new unsigned char[totalSize];
+		const int totalSize = size * size * 4 * 4 * TERRAIN_STACK_NUM_CHANNELS;
+		unsigned char* const remappedHeightmap = new unsigned char[totalSize];
 
 		for (int i = 0; i < totalSize; i++)
 			remappedHeightmap[i] = 0;
 
-		int start = size * 2;
+		const int start = size * 2;
 
 		for (int i = 0; i < size; i++) {
 			for (int j = 0; j < size; j++) {
@@ -580,7 +556,7 @@ namespace Core {
 	/*
 	* Creates mipmaps for each clipmap level. It is good to use with clipmaps since coarser level requires less data.
 	*/
-	unsigned char** Terrain::createMipmaps(unsigned char* heights, int size, int totalLevel) {
+	unsigned char** Terrain::createMipmaps(const unsigned char* const heights, int size, int totalLevel) {
 
 		unsigned char** mipmaps = new unsigned char* [totalLevel];
 		mipmaps[0] = new unsigned char[size * size * TERRAIN_STACK_NUM_CHANNELS];

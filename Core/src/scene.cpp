@@ -20,7 +20,7 @@ namespace Core {
 		glDeleteRenderbuffers(1, &filterRBO);
 		glDeleteFramebuffers(1, &FBO);
 		glDeleteFramebuffers(1, &filterFBO);
-		glDeleteProgram(framebufferProgramID);
+		//glDeleteProgram(framebufferProgramID);
 		glDeleteProgram(filterFramebufferProgramID);
 	}
 
@@ -44,11 +44,11 @@ namespace Core {
 
 		filterFramebufferProgramID = Shader::loadShaders("resources/shaders/framebuffer/framebuffer.vert",
 			"resources/shaders/framebuffer/framebuffer_filter.frag");
-		framebufferProgramID = Shader::loadShaders("resources/shaders/framebuffer/framebuffer.vert",
-			"resources/shaders/framebuffer/framebuffer.frag");
+		//framebufferProgramID = Shader::loadShaders("resources/shaders/framebuffer/framebuffer.vert",
+		//	"resources/shaders/framebuffer/framebuffer.frag");
 
 		glUniform1i(glGetUniformLocation(filterFramebufferProgramID, "screenTexture"), 0);
-		glUniform1i(glGetUniformLocation(framebufferProgramID, "screenTexture"), 0);
+		//glUniform1i(glGetUniformLocation(framebufferProgramID, "screenTexture"), 0);
 
 		float screenQuadVertices[] = {
 			// positions   // texCoords

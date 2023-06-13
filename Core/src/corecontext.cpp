@@ -20,7 +20,7 @@ namespace Core {
 
 		delete scene;
 		delete renderer;
-		//delete fileSystem;
+		delete fileSystem;
 		delete glewContext;
 		delete glfwContext;
 
@@ -33,8 +33,6 @@ namespace Core {
 		fileSystem->init();
 
 		scene->start();
-
-		//delete fileSystem;
 	}
 
 	void CoreContext::update(float dt) {

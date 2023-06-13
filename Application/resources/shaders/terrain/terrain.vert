@@ -11,7 +11,7 @@
 
 #version 460 core
 
-#define MAX_HEIGHT 180.f
+#define MAX_HEIGHT 120.f
 #define TERRAIN_INSTANCED_RENDERING
 
 #ifdef TERRAIN_INSTANCED_RENDERING

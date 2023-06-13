@@ -41,7 +41,7 @@ namespace Core {
 		unsigned int textureBuffer;
 		unsigned int FBO;
 		unsigned int RBO;
-		unsigned int framebufferProgramID;
+		//unsigned int framebufferProgramID;
 
 		Terrain* terrain = NULL;
 		Cubemap* cubemap;

@@ -22,7 +22,7 @@
 #define TERRAIN_STACK_NUM_CHANNELS 2
 #define MIP_STACK_DIVISOR_POWER 3
 #define TERRAIN_TEXTURE_SIZE 1024
-#define MAX_HEIGHT 180
+#define MAX_HEIGHT 120
 #define MAP_SIZE 4096
 
 #define CLIPMAP_RESOLUTION 120
@@ -42,8 +42,6 @@
 namespace Core {
 
 	/// <summary>
-	///  TODO:
-	///  less data
 	///  bugs: getClipmap pos and grid poses are relatively not equal when camera goes negative direction. Importance: less
 	/// </summary>
 
@@ -175,9 +173,6 @@ namespace Core {
 		float scale_color8_dist0 = 0.80f;
 		float scale_color8_dist1 = 0.05f;
 
-		//float scale_color9_dist0 = 0.80f;
-		//float scale_color9_dist1 = 0.05f;
-
 		glm::vec3 color0;
 		glm::vec3 color1;
 
@@ -185,7 +180,6 @@ namespace Core {
 		float macroScale_1 = 0.06f;
 		float macroScale_2 = 0.005f;
 		float macroPower = 6.0f;
-		//float macroAmount = 6.25f;
 		float macroOpacity = 2.25f;
 
 		float macroAmountLayer0 = 6.25f;
@@ -224,8 +218,6 @@ namespace Core {
 
 		float heightBias0 = 135;
 		float heightSharpness0 = 2;
-		//float heightBias1 = 135;
-		//float heightSharpness1 = 5;
 
 		bool showBounds = false;
 
@@ -234,13 +226,13 @@ namespace Core {
 		void start();
 		void initShaders(const char* vertexShader, const char* fragShader);
 		void initBlockAABBs();
-		void initHeightmapStack(std::string path);
+		void initHeightmapStack(const std::string path);
 		void loadTerrainHeightmapOnInit(glm::vec3 camPos, int clipmapLevel);
 		void generateTerrainClipmapsVertexArrays();
 		void createElevationMapTextureArray(unsigned char** heightmapArray);
 		void loadTextures();
-		unsigned char* resizeHeightmap(unsigned char* heightmap, int size);
-		unsigned char** createMipmaps(unsigned char* heights, int size, int totalLevel);
+		unsigned char* resizeHeightmap(const unsigned char* heightmap, int size);
+		unsigned char** createMipmaps(const unsigned char* const heights, int size, int totalLevel);
 		void createHeightmapStack(unsigned char** heightMapList, int width);
 		void createLowResolutionHeightmapStack();
 		void update(float dt);

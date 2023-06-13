@@ -69,6 +69,7 @@ namespace Core {
 		glDisable(GL_DEPTH_TEST);
 		glClear(GL_COLOR_BUFFER_BIT);
 		glUseProgram(scene->filterFramebufferProgramID);
+		glUniform2f(glGetUniformLocation(scene->filterFramebufferProgramID, "resolution"), scene->width, scene->height);
 		glBindVertexArray(scene->screenQuadVAO);
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, scene->textureBuffer);

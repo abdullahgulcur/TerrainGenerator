@@ -30,9 +30,9 @@ namespace Editor {
 
 	private:
 
-		float rotationSpeed = 0.020;
-		float translationSpeed = 500;
-		float scrollSpeed = 200;
+		float rotationSpeed = 0.02;
+		float translationSpeed = 50;
+		float scrollSpeed = 20;
 		float generalSpeed = 0.3f;
 
 		//float rotationSpeed = 0.02;
@@ -65,9 +65,6 @@ namespace Editor {
 		float horizontalAngle = 0.f;
 		float verticalAngle = 0.f;
 		glm::vec3 position = glm::vec3(0, 0, -5);
-
-		//unsigned int width;
-		//unsigned int height;
 
 		SceneCamera();
 		~SceneCamera();
