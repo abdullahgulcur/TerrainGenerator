@@ -19,10 +19,12 @@ This is an OpenGL terrain engine that can be used for both games and simulations
 To run the project, open Visual Studio .sln file, set project “Application” as a startup project. Build it and copy all the binaries in the “Binaries” folder to the build directory where the .exe file was created.
 ## How To Use
 ## Future Plans
--Vegetation (Tree, bush and grass)
--Rocks
--Roads
--Lakes
+* Roads
+* Vegetation (Tree, bush and grass)
+* Rocks
+* Lakes
+* Volumetric Clouds
+* Decals
 ## References
 Clipmap rendering using nested grids. Reference : https://developer.nvidia.com/gpugems/gpugems2/part-i-geometric-complexity/chapter-2-terrain-rendering-using-gpu-based-geometry
 Virtual texturing for heightmaps. Reference: https://notkyon.moe/vt/Clipmap.pdf
