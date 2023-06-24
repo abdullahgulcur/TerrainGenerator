@@ -26,7 +26,8 @@ To run the project, open Visual Studio .sln file, set project “Application” 
 * Volumetric Clouds
 * Decals
 ## References
-Clipmap rendering using nested grids. Reference : https://developer.nvidia.com/gpugems/gpugems2/part-i-geometric-complexity/chapter-2-terrain-rendering-using-gpu-based-geometry
-Virtual texturing for heightmaps. Reference: https://notkyon.moe/vt/Clipmap.pdf
-Procedural shader splatting. Reference : https://media.contentapi.ea.com/content/dam/eacom/frostbite/files/chapter5-andersson-terrain-rendering-in-frostbite.pdf
-
+* Clipmap rendering using nested grids. Reference : https://developer.nvidia.com/gpugems/gpugems2/part-i-geometric-complexity/chapter-2-terrain-rendering-using-gpu-based-geometry
+* Virtual texturing for heightmaps. Reference: https://notkyon.moe/vt/Clipmap.pdf
+* Procedural shader splatting. Reference : https://media.contentapi.ea.com/content/dam/eacom/frostbite/files/chapter5-andersson-terrain-rendering-in-frostbite.pdf
+* Nice terrain material tutorial series: https://www.youtube.com/watch?v=yCRzOdo4b68&t=8s&ab_channel=UnrealSensei
+* FXAA implementation: https://github.com/mitsuhiko/webgl-meincraft
