@@ -7,7 +7,7 @@
 
 // REFERENCES
 // Procedural shader splatting. Reference : https://media.contentapi.ea.com/content/dam/eacom/frostbite/files/chapter5-andersson-terrain-rendering-in-frostbite.pdf
-
+// Nice terrain material tutorial series for Unreal Engine: https://www.youtube.com/watch?v=yCRzOdo4b68&t=8s&ab_channel=UnrealSensei
 #version 460 core
 
 struct Color

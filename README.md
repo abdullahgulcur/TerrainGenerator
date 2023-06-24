@@ -18,6 +18,7 @@ This is an OpenGL terrain engine that can be used for both games and simulations
 ## How To Build
 To run the project, open Visual Studio .sln file, set project “Application” as a startup project. Build it and copy all the binaries in the “Binaries” folder to the build directory where the .exe file was created.
 ## How To Use
+After running the project just click the terrain button and change terrain properties. You can change light and fog from the environment options as well.
 ## Future Plans
 * Roads
 * Vegetation (Tree, bush and grass)
@@ -31,3 +32,4 @@ To run the project, open Visual Studio .sln file, set project “Application” 
 * Procedural shader splatting. Reference : https://media.contentapi.ea.com/content/dam/eacom/frostbite/files/chapter5-andersson-terrain-rendering-in-frostbite.pdf
 * Nice terrain material tutorial series: https://www.youtube.com/watch?v=yCRzOdo4b68&t=8s&ab_channel=UnrealSensei
 * FXAA implementation: https://github.com/mitsuhiko/webgl-meincraft
+* Best OpenGL tutorial in my opinion: https://learnopengl.com
