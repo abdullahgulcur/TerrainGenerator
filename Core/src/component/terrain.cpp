@@ -515,7 +515,7 @@ namespace Core {
 		normal7 = T7_n->loadToGPU();
 		normal8 = T8_n->loadToGPU();
 
-		Texture* macro = textures.at("gold_a");
+		Texture* macro = textures.at("macro");
 		Texture* noise = textures.at("noiseTexture");
 
 		macroTexture = macro->loadToGPU();

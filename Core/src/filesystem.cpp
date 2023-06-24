@@ -49,7 +49,7 @@ namespace Core {
 		FileSystem::loadTexture("resources/textures/terrain/texturemaps/grasslawn_ao.png");
 		FileSystem::loadTexture("resources/textures/terrain/texturemaps/grasswild_ao.png");
 
-		FileSystem::loadTexture("resources/textures/terrain/gold_a.png");
+		FileSystem::loadTexture("resources/textures/terrain/macro.png");
 		FileSystem::loadTexture("resources/textures/terrain/noiseTexture.png");
 	}
 
